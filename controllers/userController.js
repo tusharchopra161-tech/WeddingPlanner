@@ -1,5 +1,5 @@
 const getUser=(req,res)=>{
-
+    res.send("user show");
 }
 const createUser=(req,res)=>{
     const data=req.body;
