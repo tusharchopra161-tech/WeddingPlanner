@@ -4,7 +4,7 @@ const cors=require("cors")
 const app=express()
 const dotenv=require("dotenv");
 dotenv.config()
-app.use(cors({origin:"http://localhost:5173"}))
+app.use(cors({origin:"http://localhost:5174"}))
 app.use(express.json())
 const connectDB=require("./config/db")
 const port = process.env.PORT || 3000;
