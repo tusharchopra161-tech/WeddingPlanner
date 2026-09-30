@@ -2,9 +2,19 @@ const getUser=(req,res)=>{
     res.send("user show");
 }
 const createUser=(req,res)=>{
-    const data=req.body;
-    console.log("data collect",data);
+    try{
+        const {name,mobileno,email,password}=req.body;
+    if(name==""&&mobileno==""&&email==""&&password==""){
+        res.status(301).json({success:false,message:"the user have not full credential"})
+    }
+    console.log("data collect",name,email,mobileno,password);
     res.status(200).json({success:true,message:"user created successfuly"});
+    }catch(err){
+        res.status(400).json({
+            success:false,
+            message:err
+        })
+    }
 }
 const updateUser=(req,res)=>{
 
