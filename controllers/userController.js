@@ -1,4 +1,4 @@
-import User from "../models/userModels";
+const User= require("../models/userModels");
 const getUser=(req,res)=>{
     res.send("user show");
 }
