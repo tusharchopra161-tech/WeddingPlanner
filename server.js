@@ -4,7 +4,7 @@ const cors=require("cors")
 const app=express()
 const dotenv=require("dotenv");
 dotenv.config()
-app.use(cors({origin:"https://weddinplanner-frontend-p4v0klec7-tusharchopra161-4346.vercel.app"}))
+app.use(cors({origin:"https://weddinplanner-frontend.vercel.app"}))
 app.use(express.json())
 const connectDB=require("./config/db")
 const port = process.env.PORT || 3000;
