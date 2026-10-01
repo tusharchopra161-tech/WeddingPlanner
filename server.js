@@ -4,7 +4,10 @@ const cors=require("cors")
 const app=express()
 const dotenv=require("dotenv");
 dotenv.config()
-app.use(cors({origin:"https://weddinplanner-frontend.vercel.app"}))
+app.use(cors(
+    {origin:"https://weddinplanner-frontend.vercel.app",
+        credentials:true
+    }))
 app.use(express.json())
 const connectDB=require("./config/db")
 const port = process.env.PORT || 3000;
@@ -13,6 +16,8 @@ const port = process.env.PORT || 3000;
     res.send("Wedding Planner Backend is working");
 });
 app.use("/user",userRoute);
+
+
 app.listen(port, async () => {
     await connectDB();
     console.log(`Server running on port ${port}`);

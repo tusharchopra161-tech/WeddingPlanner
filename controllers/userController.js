@@ -29,4 +29,19 @@ const updateUser=(req,res)=>{
 const deleteUser=(req,res)=>{
 
 }
- module.exports={createUser,getUser,updateUser,deleteUser}
+const checkUser=async (req,res)=>{
+    try{
+        const {name,password}=req.body;
+        console.log(name,password)
+        const check=await User.findOne({name,password})
+        console.log(check)
+        res.send({name:name,password:password})
+
+    }catch(err){
+        res.status(400).json({
+            success:false,
+            message:err
+        })
+    }
+}
+ module.exports={createUser,getUser,updateUser,deleteUser,checkUser}
