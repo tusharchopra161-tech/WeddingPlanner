@@ -34,11 +34,20 @@ const checkUser=async (req,res)=>{
         const {name,password}=req.body;
         console.log(name,password)
         const check=await User.findOne({name,password})
-        console.log(check)
-        res.send({name:name,password:password})
+        if(check){
+           return res.status(200).json({
+                success:true,
+                message:"login Successful",
+                user:{name:check.name,id:check._id}
+            })
+        }
+        res.status(400).json({
+            success:false,
+            message:"User not exist"
+        })
 
     }catch(err){
-        res.status(400).json({
+        res.status(500).json({
             success:false,
             message:err
         })
