@@ -7,7 +7,9 @@ dotenv.config()
 app.use(cors(
     {origin:["https://weddinplanner-frontend.vercel.app",
         "https://weddinplanner-frontend-jn17qx1fw-tusharchopra161-4346.vercel.app",
-        "https://weddinplanner-frontend-5g2i5q8ax-tusharchopra161-4346.vercel.app"
+        "https://weddinplanner-frontend-5g2i5q8ax-tusharchopra161-4346.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:5174"
     ],
         credentials:true
     }))

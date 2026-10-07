@@ -38,7 +38,7 @@ const checkUser=async (req,res)=>{
            return res.status(200).json({
                 success:true,
                 message:"login Successful",
-                user:{name:check.name,id:check._id}
+                user:{userName:check.name,userId:check._id}
             })
         }
         res.status(400).json({
