@@ -19,13 +19,36 @@ const userSchema = new mongoose.Schema({
         minlength: 5,
         trim: true,
         lowercase: true,
-        //   match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     },
     password: {
         type: String,
         minlength: 6,
         unique:true,
         required: true
+    },
+    role:{
+        type:String,
+        enum:["user","owner","admin"],
+        default:"user"
+    },
+    isActive:{
+        type:String,
+        default:true
+    },
+    subsciption:{
+        isSubscribe:{
+            type:Boolean,
+            default:false
+        },
+        plan:{
+            type:String,
+            enum:["free","premium"],
+            default:"free"
+        },
+        expresAt:{
+            type:Date,
+            default:null
+        }
     }
 },
     {

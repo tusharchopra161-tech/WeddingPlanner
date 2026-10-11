@@ -1,5 +1,7 @@
 const express=require("express")
-const userRoute=require("./routes/userRoute")
+const mongoose=require("mongoose")
+const userRoute=require("./routes/userRoute");
+const palaceRoute=require("./routes/palaceRoute")
 const cors=require("cors")
 const app=express()
 const dotenv=require("dotenv");
@@ -21,10 +23,11 @@ const port = process.env.PORT || 3000;
     res.send("Wedding Planner Backend is working");
 });
 app.use("/user",userRoute);
-
+app.use("/palace",palaceRoute)
 
 app.listen(port, async () => {
     await connectDB();
+    console.log("Connected database:", mongoose.connection.name);
     console.log(`Server running on port ${port}`);
 });
 module.exports=app
