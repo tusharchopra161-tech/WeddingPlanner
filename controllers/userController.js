@@ -4,16 +4,20 @@ const getUser=(req,res)=>{
 }
 const createUser=async(req,res)=>{
     try{
-        const {name,mobileno,email,password}=req.body;
+        const {name,mobileno,email,password,role,isActive,subsciption}=req.body;
     if(name==""&&mobileno==""&&email==""&&password==""){
         res.status(301).json({success:false,message:"the user have not full credential"})
     }
-    console.log("data collect",name,email,mobileno,password);
+
+    
     const user=await User.create({
         name,
         email,
         mobileno,
-        password
+        password,
+        role,
+        isActive,
+        subsciption
     })
     res.status(200).json({success:true,message:"user created successfuly"});
     }catch(err){
