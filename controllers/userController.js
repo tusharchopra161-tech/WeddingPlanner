@@ -7,6 +7,7 @@ const jwt = require("jsonwebtoken");
 
 const createUser = async (req, res) => {
     try {
+
         const { name, mobileno, email, password, role, isActive, subsciption } = req.body;
         if (name == "" && mobileno == "" && email == "" && password == "") {
             res.status(301).json({ success: false, message: "the user have not full credential" })
@@ -24,7 +25,7 @@ const createUser = async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
-
+        console.log(hashedPassword)
         const user = await User.create({
             name: name.trim(),
             email: normalizedEmail,
