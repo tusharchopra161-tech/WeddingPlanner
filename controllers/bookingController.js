@@ -67,7 +67,7 @@ const Palace = require("../models/palaceModels.js");
     }
 
     const booking = await Booking.create({
-      user: req.user.id,
+      user: req.body.userId,
       palace: palaceId,
       weddingDate,
       guestCount: guests,
