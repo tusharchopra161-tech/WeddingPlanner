@@ -2,11 +2,13 @@ const Booking=require("../models/bookingModels.js")
 const Palace = require("../models/palaceModels.js");
 
  const createBooking = async (req, res) => {
+  const allp=await Palace.findOne({_id:palaceId})
+  console.log(allp)
   try {
     const { palaceId, weddingDate, guestCount, specialRequests } = req.body;
     console.log("Collection:", Palace.collection.name);
-    const allp=await Palace.find()
-    console.log(allp)
+    
+    
     if (!palaceId || !weddingDate || !guestCount) {
       return res.status(400).json({
         success: false,
