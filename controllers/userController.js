@@ -42,7 +42,7 @@ const checkUser=async (req,res)=>{
            return res.status(200).json({
                 success:true,
                 message:"login Successful",
-                user:{userName:check.name,userId:check._id}
+                user:check
             })
         }
         res.status(400).json({

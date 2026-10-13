@@ -87,7 +87,7 @@ const Palace = require("../models/palaceModels.js");
  const getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({
-      user: req.user.id,
+      user: req.params
     })
       .populate("palace")
       .sort({ createdAt: -1 });
@@ -107,9 +107,9 @@ const Palace = require("../models/palaceModels.js");
 
  const getOwnerBookingRequests = async (req, res) => {
   try {
-    // Assumes Palace has an `owner` field referencing the User model
+    
     const palaces = await Palace.find({
-      owner: req.user.id,
+      owner: req.params,
     }).select("_id");
 
     const palaceIds = palaces.map((palace) => palace._id);
@@ -156,47 +156,11 @@ const Palace = require("../models/palaceModels.js");
       });
     }
 
-    // Verify that the logged-in owner owns this palace
-    const palace = await Palace.findOne({
-      _id: booking.palace,
-      owner: req.user.id,
-    });
-
-    if (!palace) {
-      return res.status(403).json({
-        success: false,
-        message: "You are not authorized to manage this booking",
-      });
-    }
-
     if (booking.bookingStatus !== "pending") {
       return res.status(400).json({
         success: false,
         message: "Only pending bookings can be updated",
       });
-    }
-
-    // Check again before confirming to avoid date conflicts
-    if (bookingStatus === "confirmed") {
-      const start = new Date(booking.weddingDate);
-      start.setHours(0, 0, 0, 0);
-
-      const end = new Date(start);
-      end.setDate(end.getDate() + 1);
-
-      const conflict = await Booking.findOne({
-        _id: { $ne: booking._id },
-        palace: booking.palace,
-        weddingDate: { $gte: start, $lt: end },
-        bookingStatus: "confirmed",
-      });
-
-      if (conflict) {
-        return res.status(409).json({
-          success: false,
-          message: "Another booking is already confirmed for this date",
-        });
-      }
     }
 
     booking.bookingStatus = bookingStatus;
@@ -207,10 +171,10 @@ const Palace = require("../models/palaceModels.js");
       message: `Booking ${bookingStatus} successfully`,
       booking,
     });
-  } catch (error) {
+  } catch (err) {
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: err.message,
     });
   }
 };

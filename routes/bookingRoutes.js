@@ -7,8 +7,8 @@ const {
 } = require("../controllers/bookingController.js");
 
 router.post("/", createBooking);
-router.get("/my-bookings",getMyBookings);
-router.get("/owner-requests",getOwnerBookingRequests);
+router.get("/user/:userId",getMyBookings);
+router.get("/owner/:ownerId",getOwnerBookingRequests);
 router.patch("/:bookingId/status",updateBookingStatus);
 
 module.exports= router;
