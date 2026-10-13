@@ -2,7 +2,7 @@ const Booking=require("../models/bookingModels.js")
 const Palace = require("../models/palaceModels.js");
 
  const createBooking = async (req, res) => {
-  const allp=await Palace.findOne({_id:palaceId})
+  const allp=await Palace.findOne({_id:req.body.palaceId})
   console.log(allp)
   try {
     const { palaceId, weddingDate, guestCount, specialRequests } = req.body;
