@@ -2,9 +2,7 @@ const Booking=require("../models/bookingModels.js")
 const Palace = require("../models/palaceModels.js");
 
  const createBooking = async (req, res) => {
-  const allp=await Palace.findOne({_id:req.body.palaceId})
-  console.log(allp)
-  try {
+  
     const { palaceId, weddingDate, guestCount, specialRequests } = req.body;
     console.log("Collection:", Palace.collection.name);
     
@@ -82,12 +80,7 @@ const Palace = require("../models/palaceModels.js");
       message: "Booking request submitted successfully",
       booking,
     });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
+  
 };
 
 
