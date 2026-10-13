@@ -2,6 +2,7 @@ const express=require("express")
 const mongoose=require("mongoose")
 const userRoute=require("./routes/userRoute");
 const palaceRoute=require("./routes/palaceRoute")
+const bookingRoute=require("./routes/bookingRoutes")
 const cors=require("cors")
 const app=express()
 const dotenv=require("dotenv");
@@ -24,6 +25,7 @@ const port = process.env.PORT || 3000;
 });
 app.use("/user",userRoute);
 app.use("/palace",palaceRoute)
+app.use("/booking",bookingRoute)
 
 app.listen(port, async () => {
     await connectDB();

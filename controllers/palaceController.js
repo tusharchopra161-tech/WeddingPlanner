@@ -37,10 +37,12 @@ const createPalace=async (req,res)=>{
     }
     
 }
-const getPalace=(req,res)=>{
+const getPalace=async (req,res)=>{
+    const palace=await Palace.find()
     res.status(200).json({
         success:true,
-        message:"All Palace shown"
+        message:"All Palace shown",
+        palace
     })
 }
 const getPalaceById=(req,res)=>{

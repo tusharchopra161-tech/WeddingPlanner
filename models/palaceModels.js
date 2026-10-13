@@ -47,4 +47,5 @@ const palaceSchema = new mongoose.Schema({
 },{
     timestamps:true
 })
-module.exports = mongoose.model("Palace",palaceSchema) ; 
+const Palace= mongoose.model("Palace",palaceSchema) ; 
+module.exports=Palace
