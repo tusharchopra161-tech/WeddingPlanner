@@ -2,7 +2,7 @@ const {getMyPalace, createPalace, getPalace, getPalaceById, updatePalace, delete
 const router=require("express").Router();
 const authMiddleware = require("../middleware/authMiddelware");
 const allowRoles = require("../middleware/roleMiddelware");
-router.get("/my",authMiddleware,allowRoles("owner"),getMyPalace);
+// router.get("/my",authMiddleware,allowRoles("owner"),getMyPalace);
 router.post("/",authMiddleware,allowRoles("owner"),createPalace);
 router.get("/",getPalace)
 router.get("/pending",authMiddleware, allowRoles("admin"),getPendingPalaces);
