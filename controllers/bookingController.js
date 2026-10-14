@@ -3,7 +3,7 @@ const Palace = require("../models/palaceModels.js");
 
  const createBooking = async (req, res) => {
   
-    const { palaceId, weddingDate, guestCount, specialRequests } = req.body;
+    const {userId, palaceId, weddingDate, guestCount, specialRequests } = req.body;
     console.log("Collection:", Palace.collection.name);
     
     
@@ -67,7 +67,8 @@ const Palace = require("../models/palaceModels.js");
     }
 
     const booking = await Booking.create({
-      user: req.body.userId,
+      // user: req.body.userId,
+      user:userId,
       palace: palaceId,
       weddingDate,
       guestCount: guests,

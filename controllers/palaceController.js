@@ -2,7 +2,7 @@ const Palace = require("../models/palaceModels")
 const createPalace = async (req, res) => {
     try {
         const {
-
+            owner,
             Images,
             name,
             location,
@@ -19,7 +19,7 @@ const createPalace = async (req, res) => {
             });
         }
         const palace = await Palace.create({
-            owner: req.user.userId,
+            // owner: req.user.userId,
             Images,
             name,
             location,
