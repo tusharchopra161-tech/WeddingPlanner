@@ -1,4 +1,4 @@
-const {getMyPalace, createPalace, getPalace, getPalaceById, updatePalace, deletePalace, updatePalaceStatus,getPendingPalaces } = require("../controllers/palaceController");
+const {createPalace, getPalace, getPalaceById, updatePalace, deletePalace, updatePalaceStatus,getPendingPalaces } = require("../controllers/palaceController");
 const router=require("express").Router();
 const authMiddleware = require("../middleware/authMiddelware");
 const allowRoles = require("../middleware/roleMiddelware");
