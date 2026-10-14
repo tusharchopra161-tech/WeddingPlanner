@@ -60,7 +60,7 @@ const getPalace = async (req, res) => {
         });
     }
 };
-const getPalaceById = (req, res) => {
+const getPalaceById = async(req, res) => {
      try {
     const palace = await Palace.findById(req.params.id);
 
