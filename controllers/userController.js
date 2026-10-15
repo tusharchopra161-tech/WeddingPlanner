@@ -1,14 +1,14 @@
 const User = require("../models/userModels");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const getUser = (req, res) => {
     res.send("user show");
 }
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 
 const createUser = async (req, res) => {
     try {
 
-        const { name, mobileno, email, password, role, isActive, subsciption } = req.body;
+        const { name, mobileno, email, password, role } = req.body;
         if (name == "" && mobileno == "" && email == "" && password == "") {
             res.status(301).json({ success: false, message: "the user have not full credential" })
         }
@@ -25,7 +25,6 @@ const createUser = async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
-        console.log(hashedPassword)
         const user = await User.create({
             name: name.trim(),
             email: normalizedEmail,
@@ -51,10 +50,10 @@ const deleteUser = (req, res) => {
 }
 const checkUser = async (req, res) => {
     try {
-        const { name, password } = req.body;
+        const { email, password } = req.body;
 
         const user = await User.findOne({
-            name: name.trim(),
+            email: email.trim().toLowerCase(),
         });
 
         if (!user || !user.isActive) {
@@ -93,7 +92,13 @@ const checkUser = async (req, res) => {
             success: true,
             token,
             message: "login Successful",
-            user
+            user: {
+                _id: user._id,
+                name: user.name,
+                mobileno: user.mobileno,
+                email: user.email,
+                role: user.role,
+            }
         })
 
     } catch (err) {

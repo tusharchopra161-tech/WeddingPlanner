@@ -3,9 +3,7 @@ const Palace = require("../models/palaceModels.js");
 
  const createBooking = async (req, res) => {
   
-    const {userId, palaceId, weddingDate, guestCount, specialRequests } = req.body;
-    console.log("Collection:", Palace.collection.name);
-    
+    const {palaceId, weddingDate, guestCount, specialRequests } = req.body;
     
     if (!palaceId || !weddingDate || !guestCount) {
       return res.status(400).json({
@@ -42,7 +40,7 @@ const Palace = require("../models/palaceModels.js");
     }
 
     // Optional guest capacity validation
-    if (palace.maxGuests && guests > palace.maxGuests) {
+    if (guests > palace.capacity) {
       return res.status(400).json({
         success: false,
         message: `This palace can accommodate up to ${palace.maxGuests} guests`,
@@ -67,8 +65,7 @@ const Palace = require("../models/palaceModels.js");
     }
 
     const booking = await Booking.create({
-      // user: req.body.userId,
-      user:userId,
+      user: req.user.userId,
       palace: palaceId,
       weddingDate,
       guestCount: guests,
@@ -88,7 +85,7 @@ const Palace = require("../models/palaceModels.js");
  const getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({
-      user: req.params
+      user: req.user.userId
     })
       .populate("palace")
       .sort({ createdAt: -1 });
@@ -110,7 +107,7 @@ const Palace = require("../models/palaceModels.js");
   try {
     
     const palaces = await Palace.find({
-      owner: req.params,
+      owner: req.user.userId,
     }).select("_id");
 
     const palaceIds = palaces.map((palace) => palace._id);
@@ -119,7 +116,7 @@ const Palace = require("../models/palaceModels.js");
       palace: { $in: palaceIds },
     })
       .populate("user", "name email")
-      .populate("palace", "name location price")
+      .populate("palace", "name location price capacity")
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -136,48 +133,98 @@ const Palace = require("../models/palaceModels.js");
 };
 
 
- const updateBookingStatus = async (req, res) => {
-  try {
-    const { bookingId } = req.params;
-    const { bookingStatus } = req.body;
+const updateBookingStatus = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { bookingStatus } = req.body;
 
-    if (!["confirmed", "rejected"].includes(bookingStatus)) {
-      return res.status(400).json({
-        success: false,
-        message: "Status must be confirmed or rejected",
-      });
+        if (!["confirmed", "rejected"].includes(bookingStatus)) {
+            return res.status(400).json({
+                success: false,
+                message: "Status must be confirmed or rejected"
+            });
+        }
+
+        const booking = await Booking.findById(bookingId);
+
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                message: "Booking not found"
+            });
+        }
+
+        // Verify that this booking belongs to a palace owned by this owner
+        const palace = await Palace.findOne({
+            _id: booking.palace,
+            owner: req.user.userId
+        });
+
+        if (!palace) {
+            return res.status(403).json({
+                success: false,
+                message: "You cannot update bookings for another owner's palace"
+            });
+        }
+
+        if (booking.bookingStatus !== "pending") {
+            return res.status(400).json({
+                success: false,
+                message: "Only pending bookings can be updated"
+            });
+        }
+
+        // Avoid confirming a booking if another confirmed booking exists
+        if (bookingStatus === "confirmed") {
+            const startOfDay = new Date(booking.weddingDate);
+            startOfDay.setHours(0, 0, 0, 0);
+
+            const nextDay = new Date(startOfDay);
+            nextDay.setDate(nextDay.getDate() + 1);
+
+            const existingBooking = await Booking.findOne({
+                _id: { $ne: booking._id },
+                palace: booking.palace,
+                weddingDate: {
+                    $gte: startOfDay,
+                    $lt: nextDay
+                },
+                bookingStatus: "confirmed"
+            });
+
+            if (existingBooking) {
+                return res.status(409).json({
+                    success: false,
+                    message: "Another booking is already confirmed for this date"
+                });
+            }
+        }
+
+        booking.bookingStatus = bookingStatus;
+        await booking.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `Booking ${bookingStatus} successfully`,
+            booking
+        });
+
+    } catch (error) {
+        console.error("Update booking status error:", error);
+
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid booking ID"
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to update booking status"
+        });
     }
-
-    const booking = await Booking.findById(bookingId);
-
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: "Booking not found",
-      });
-    }
-
-    if (booking.bookingStatus !== "pending") {
-      return res.status(400).json({
-        success: false,
-        message: "Only pending bookings can be updated",
-      });
-    }
-
-    booking.bookingStatus = bookingStatus;
-    await booking.save();
-
-    return res.status(200).json({
-      success: true,
-      message: `Booking ${bookingStatus} successfully`,
-      booking,
-    });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
 };
+
 
 module.exports={updateBookingStatus,createBooking,getMyBookings,getOwnerBookingRequests}

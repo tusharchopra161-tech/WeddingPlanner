@@ -3,7 +3,7 @@ const mongoose = require("mongoose")
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
-        require: true
+        required: true
     },
     mobileno: {
         type: String,
@@ -23,7 +23,6 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         minlength: 6,
-        unique:true,
         required: true
     },
     role:{
@@ -32,7 +31,7 @@ const userSchema = new mongoose.Schema({
         default:"user"
     },
     isActive:{
-        type:String,
+        type:Boolean,
         default:true
     },
     subsciption:{

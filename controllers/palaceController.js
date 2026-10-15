@@ -2,7 +2,7 @@ const Palace = require("../models/palaceModels")
 const createPalace = async (req, res) => {
     try {
         const {
-            owner,
+            // owner,
             Images,
             name,
             location,
@@ -19,7 +19,7 @@ const createPalace = async (req, res) => {
             });
         }
         const palace = await Palace.create({
-            // owner: req.user.userId,
+            owner: req.user.userId,
             Images,
             name,
             location,
@@ -33,7 +33,7 @@ const createPalace = async (req, res) => {
         res.status(201).json({
             success: true,
             message: "palace is submitted for admin approval",
-            Palace
+            palace
         })
     } catch (err) {
         res.status(400).json({
@@ -156,7 +156,6 @@ const deletePalace = async(req, res) => {
         });
     }
 }
-
 const updatePalaceStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -216,7 +215,7 @@ const getPendingPalaces = async (req, res) => {
 }
 const getMyPalace = async (req, res) => {
   try {
-    const palace = await Palace.findOne({
+    const palace = await Palace.find({
       owner: req.user.userId,
     }).sort({ createdAt: -1 });
 
