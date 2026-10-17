@@ -11,6 +11,7 @@ dotenv.config()
 const userRoute=require("./routes/userRoute");
 const palaceRoute=require("./routes/palaceRoute")
 const bookingRoute=require("./routes/bookingRoutes")
+const pushRoute=require("./routes/pushRoutes")
 const connectDB=require("./config/db")
 
 const app=express()
@@ -84,6 +85,7 @@ app.get("/", (req, res) => {
 app.use("/user",userRoute);
 app.use("/palace",palaceRoute)
 app.use("/booking",bookingRoute)
+app.use("/push",pushRoute)
 
 const startServer=async()=>{
     try{

@@ -1,4 +1,5 @@
 const Palace = require("../models/palaceModels")
+const sendAdminPush = require("../utils/sendAdminPush");
 const createPalace = async (req, res) => {
   try {
     const {
@@ -37,6 +38,17 @@ const createPalace = async (req, res) => {
         message: "A new palace has been submitted for approval",
         palace,
       });
+    }
+    try {
+      await sendAdminPush({
+        title: "Wedding Planner",
+        body: `${palace.name} has been submitted for admin approval.`,
+        url: "/admin-dashboard",
+        tag: `new-palace-${palace._id}`,
+      });
+    } catch (error) {
+      // A push failure must not undo the saved palace.
+      console.error("Failed to send palace push:", error.message);
     }
     res.status(201).json({
       success: true,
