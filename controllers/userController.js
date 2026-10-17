@@ -51,7 +51,7 @@ const deleteUser = (req, res) => {
 const checkUser = async (req, res) => {
     try {
         const { email, password } = req.body;
-
+        console.log(email,password)
         const user = await User.findOne({
             email: email.trim().toLowerCase(),
         });

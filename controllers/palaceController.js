@@ -1,67 +1,75 @@
 const Palace = require("../models/palaceModels")
 const createPalace = async (req, res) => {
-    try {
-        const {
-            // owner,
-            Images,
-            name,
-            location,
-            description,
-            price,
-            capacity,
-            facilities,
-            isAvailable,
-        } = req.body;
-        if (!name || !location || price == null || capacity == null) {
-            return res.status(400).json({
-                success: false,
-                message: "Name, location, price, and capacity are required",
-            });
-        }
-        const palace = await Palace.create({
-            owner: req.user.userId,
-            Images,
-            name,
-            location,
-            description,
-            price,
-            capacity,
-            facilities,
-            isAvailable,
-            status: "pending"
-        })
-        res.status(201).json({
-            success: true,
-            message: "palace is submitted for admin approval",
-            palace
-        })
-    } catch (err) {
-        res.status(400).json({
-            success: false,
-            message: "faild create to palace"
-        })
+  try {
+    const {
+      // owner,
+      Images,
+      name,
+      location,
+      description,
+      price,
+      capacity,
+      facilities,
+      isAvailable,
+    } = req.body;
+    if (!name || !location || price == null || capacity == null) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, location, price, and capacity are required",
+      });
     }
+    const palace = await Palace.create({
+      owner: req.user.userId,
+      Images,
+      name,
+      location,
+      description,
+      price,
+      capacity,
+      facilities,
+      isAvailable,
+      status: "pending"
+    })
+    // Send a event after saving the palace
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("new-palace", {
+        message: "A new palace has been submitted for approval",
+        palace,
+      });
+    }
+    res.status(201).json({
+      success: true,
+      message: "palace is submitted for admin approval",
+      palace
+    })
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      message: "faild create to palace"
+    })
+  }
 
 }
 const getPalace = async (req, res) => {
-    try {
-        const palace = await Palace.find({ status: "approved" });
+  try {
+    const palace = await Palace.find({ status: "approved" });
 
-        return res.status(200).json({
-            success: true,
-            message: "Approved palaces fetched successfully",
-            palace,
-        });
-    } catch (err) {
-        console.error("Get palace error:", err);
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch palaces",
-        });
-    }
+    return res.status(200).json({
+      success: true,
+      message: "Approved palaces fetched successfully",
+      palace,
+    });
+  } catch (err) {
+    console.error("Get palace error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch palaces",
+    });
+  }
 };
-const getPalaceById = async(req, res) => {
-     try {
+const getPalaceById = async (req, res) => {
+  try {
     const palace = await Palace.findById(req.params.id);
 
     if (!palace) {
@@ -82,79 +90,79 @@ const getPalaceById = async(req, res) => {
     });
   }
 }
-const updatePalace = async(req, res) => {
-    try {
-        const palace = await Palace.findOne({
-            _id: req.params.id,
-            owner: req.user.userId,
-        });
+const updatePalace = async (req, res) => {
+  try {
+    const palace = await Palace.findOne({
+      _id: req.params.id,
+      owner: req.user.userId,
+    });
 
-        if (!palace) {
-            return res.status(404).json({
-                success: false,
-                message: "Palace not found or you do not own this palace",
-            });
-        }
-
-        const allowedFields = [
-            "Images",
-            "name",
-            "location",
-            "description",
-            "price",
-            "capacity",
-            "facilities",
-            "isAvailable",
-        ];
-
-        allowedFields.forEach((field) => {
-            if (req.body[field] !== undefined) {
-                palace[field] = req.body[field];
-            }
-        });
-
-        await palace.save();
-
-        return res.status(200).json({
-            success: true,
-            message: "Palace updated successfully",
-            palace,
-        });
-    } catch (err) {
-        console.error("Update palace error:", err);
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to update palace",
-        });
+    if (!palace) {
+      return res.status(404).json({
+        success: false,
+        message: "Palace not found or you do not own this palace",
+      });
     }
+
+    const allowedFields = [
+      "Images",
+      "name",
+      "location",
+      "description",
+      "price",
+      "capacity",
+      "facilities",
+      "isAvailable",
+    ];
+
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        palace[field] = req.body[field];
+      }
+    });
+
+    await palace.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Palace updated successfully",
+      palace,
+    });
+  } catch (err) {
+    console.error("Update palace error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update palace",
+    });
+  }
 }
-const deletePalace = async(req, res) => {
-    try {
-        const palace = await Palace.findOneAndDelete({
-            _id: req.params.id,
-            owner: req.user.userId,
-        });
+const deletePalace = async (req, res) => {
+  try {
+    const palace = await Palace.findOneAndDelete({
+      _id: req.params.id,
+      owner: req.user.userId,
+    });
 
-        if (!palace) {
-            return res.status(404).json({
-                success: false,
-                message: "Palace not found or you do not own this palace",
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: "Palace deleted successfully",
-        });
-    } catch (err) {
-        console.error("Delete palace error:", err);
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to delete palace",
-        });
+    if (!palace) {
+      return res.status(404).json({
+        success: false,
+        message: "Palace not found or you do not own this palace",
+      });
     }
+
+    return res.status(200).json({
+      success: true,
+      message: "Palace deleted successfully",
+    });
+  } catch (err) {
+    console.error("Delete palace error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete palace",
+    });
+  }
 }
 const updatePalaceStatus = async (req, res) => {
   try {
@@ -236,6 +244,6 @@ const getMyPalace = async (req, res) => {
   }
 };
 
-module.exports = { createPalace, getPalace, getPalaceById, updatePalace, deletePalace, updatePalaceStatus,getPendingPalaces,getMyPalace }
+module.exports = { createPalace, getPalace, getPalaceById, updatePalace, deletePalace, updatePalaceStatus, getPendingPalaces, getMyPalace }
 
 
