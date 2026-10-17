@@ -1,4 +1,4 @@
-const { getPublicKey } = require("../controllers/pushNotifiController");
+const router=require("express").Router()
 const authenticateAdmin= require("../middleware/authenticateAdminMiddelware");
 const {ggetPublicKey,enableNotification,removeNotification}=require("../controllers/pushNotifiController")
 // Frontend needs this public key to subscribe.
