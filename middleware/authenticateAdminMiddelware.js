@@ -1,4 +1,5 @@
 const User = require("../models/userModels")
+const jwt = require("jsonwebtoken");
 const authenticateAdmin = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -17,9 +18,7 @@ const authenticateAdmin = async (req, res, next) => {
       process.env.JWT_SECRET
     );
 
-    const userId =
-      decoded.userId || decoded.id || decoded._id;
-
+    const userId = decoded.userId || decoded.id || decoded._id;
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -37,6 +36,7 @@ const authenticateAdmin = async (req, res, next) => {
     }
 
     req.user = user;
+    console.log("authentication complete")
     next();
   } catch (error) {
     return res.status(401).json({

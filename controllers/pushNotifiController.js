@@ -1,6 +1,4 @@
 const express = require("express");
-const jwt = require("jsonwebtoken");
-const router = express.Router();
 const PushSubscription=require("../models/pushSubscriptionModel");
 const User = require("../models/userModels");
 
@@ -20,7 +18,6 @@ const ggetPublicKey=(req, res) => {
 const enableNotification=async (req, res) => {
     try {
       const subscription = req.body;
-
       if (
         !subscription?.endpoint ||
         !subscription?.keys?.p256dh ||
