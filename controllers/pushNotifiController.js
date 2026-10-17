@@ -4,7 +4,7 @@ const router = express.Router();
 const PushSubscription=require("../models/pushSubscriptionModel");
 const User = require("../models/userModels");
 
-const getPublicKey=(req, res) => {
+const ggetPublicKey=(req, res) => {
   if (!process.env.VAPID_PUBLIC_KEY) {
     return res.status(500).json({
       success: false,
@@ -90,4 +90,4 @@ const removeNotification=async (req, res) => {
       });
     }
   }
-module.exports={getPublicKey,enableNotification,removeNotification}
+module.exports={ggetPublicKey,enableNotification,removeNotification}
