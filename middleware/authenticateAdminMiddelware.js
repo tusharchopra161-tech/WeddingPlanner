@@ -1,3 +1,4 @@
+const User = require("../models/userModels")
 const authenticateAdmin = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
