@@ -8,7 +8,7 @@ const authenticateAdmin = async (req, res, next) => {
         message: "Authentication required",
       });
     }
-
+    console.log(authHeader)
     const token = authHeader.split(" ")[1];
 
     const decoded = jwt.verify(
