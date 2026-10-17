@@ -2,6 +2,8 @@ const express=require("express")
 const mongoose=require("mongoose")
 const http = require("http");
 const { Server } = require("socket.io");
+const User = require("./models/userModels");
+const jwt=require("jsonwebtoken");
 const cors=require("cors")
 const dotenv=require("dotenv");
 dotenv.config()
@@ -25,6 +27,7 @@ app.use(cors(
     }))
 
 app.use(express.json())
+
 const io=new Server(server,{
     cors:{
       origin:allowedOrigins,
@@ -32,13 +35,42 @@ const io=new Server(server,{
       credentials:true  
     }
 })
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+
+    if (!token) {
+      return next(new Error("Authentication required"));
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const userId = decoded.userId || decoded.id || decoded._id;
+
+    if (!userId) {
+      return next(new Error("Invalid token payload"));
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user || user.role !== "admin") {
+      return next(new Error("Admin access only"));
+    }
+
+    socket.user = user;
+    next();
+  } catch (error) {
+    next(new Error("Invalid or expired token"));
+  }
+});
 // Make io accessible inside controllers through req.app.get("io")
 app.set("io", io);
 io.on("connection",(socket)=>{
+    socket.join("admins")
     console.log("socket connected:",socket.id)
 
     socket.on("disconnect",()=>{
-        console.log("socke disconnected:",socket.id) 
+        console.log("Admin disconnected:",socket.id) 
     })
 
 })

@@ -33,7 +33,7 @@ const createPalace = async (req, res) => {
     // Send a event after saving the palace
     const io = req.app.get("io");
     if (io) {
-      io.emit("new-palace", {
+      io.to("admins").emit("new-palace", {
         message: "A new palace has been submitted for approval",
         palace,
       });
