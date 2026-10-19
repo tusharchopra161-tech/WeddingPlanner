@@ -7,8 +7,8 @@ const getUser = (req, res) => {
 
 const createUser = async (req, res) => {
     try {
-
         const { name, mobileno, email, password, role } = req.body;
+        console.log(name,email,password)
         if (name == "" && mobileno == "" && email == "" && password == "") {
             res.status(301).json({ success: false, message: "the user have not full credential" })
         }
