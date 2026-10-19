@@ -32,8 +32,6 @@ const createUser = async (req, res) => {
             mobileno,
             password: hashedPassword,
             role,
-            isActive,
-            subsciption
         })
         console.log("after user created :",user)
         res.status(200).json({ success: true, message: "user created successfuly" });
