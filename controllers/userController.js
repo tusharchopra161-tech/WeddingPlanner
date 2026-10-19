@@ -16,7 +16,7 @@ const createUser = async (req, res) => {
         const existingUser = await User.findOne({
             email: normalizedEmail,
         });
-
+        console.log(normalizedEmail)
         if (existingUser) {
             return res.status(409).json({
                 success: false,
@@ -25,6 +25,7 @@ const createUser = async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
+        console.log("before user created :",hashedPassword)
         const user = await User.create({
             name: name.trim(),
             email: normalizedEmail,
