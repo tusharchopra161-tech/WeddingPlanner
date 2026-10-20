@@ -265,7 +265,7 @@ const updatePalaceStatus = async (req, res) => {
     const palace = await Palace.findByIdAndUpdate(
       req.params.id,
       { status },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!palace) {
