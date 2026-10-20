@@ -1,10 +1,30 @@
 const Palace = require("../models/palaceModels")
+const cloudinary = require("../config/coudinary")
+const {Readable} = require("stream")
 const sendAdminPush = require("../utils/sendAdminPush");
+
+const uploadToCloudinary = (file) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "weddingplanner/palaces",
+        resource_type: "image",
+      },
+      (error, result) => {
+        if (error) {
+          return reject(error);
+        }
+
+        resolve(result.secure_url);
+      }
+    );
+
+    Readable.from(file.buffer).pipe(uploadStream);
+  });
+};
 const createPalace = async (req, res) => {
   try {
     const {
-      // owner,
-      Images,
       name,
       location,
       description,
@@ -13,32 +33,85 @@ const createPalace = async (req, res) => {
       facilities,
       isAvailable,
     } = req.body;
-    if (!name || !location || price == null || capacity == null) {
+
+    const files = req.files || [];
+
+    if (
+      !name?.trim() ||
+      !location?.trim() ||
+      !description?.trim() ||
+      price == null ||
+      capacity == null
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Name, location, price, and capacity are required",
+        message: "Please provide all required venue details",
       });
     }
+
+    if (
+      !Number.isFinite(Number(price)) ||
+      Number(price) < 0 ||
+      !Number.isInteger(Number(capacity)) ||
+      Number(capacity) < 1
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid price and capacity",
+      });
+    }
+
+    if (files.length < 5 || files.length > 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload between 5 and 10 palace photos",
+      });
+    }
+
+    // Upload all selected photos to Cloudinary
+    const imageUrls = await Promise.all(
+      files.map((file) => uploadToCloudinary(file))
+    );
+
+    // FormData sends facilities as a string
+    let parsedFacilities = facilities || [];
+
+    if (typeof parsedFacilities === "string") {
+      parsedFacilities = JSON.parse(parsedFacilities);
+    }
+
+    if (!Array.isArray(parsedFacilities)) {
+      return res.status(400).json({
+        success: false,
+        message: "Facilities must be an array",
+      });
+    }
+
     const palace = await Palace.create({
       owner: req.user.userId,
-      Images,
-      name,
-      location,
-      description,
-      price,
-      capacity,
-      facilities,
-      isAvailable,
-      status: "pending"
-    })
-    // Send a event after saving the palace
+      Images: imageUrls,
+      name: name.trim(),
+      location: location.trim(),
+      description: description.trim(),
+      price: Number(price),
+      capacity: Number(capacity),
+      facilities: parsedFacilities,
+      isAvailable: isAvailable === undefined
+        ? true
+        : isAvailable === "false" ? false : isAvailable,
+      status: "pending",
+    });
+
+    
     const io = req.app.get("io");
+
     if (io) {
       io.to("admins").emit("new-palace", {
         message: "A new palace has been submitted for approval",
         palace,
       });
     }
+
     try {
       await sendAdminPush({
         title: "Wedding Planner",
@@ -47,22 +120,23 @@ const createPalace = async (req, res) => {
         tag: `new-palace-${palace._id}`,
       });
     } catch (error) {
-      // A push failure must not undo the saved palace.
       console.error("Failed to send palace push:", error.message);
     }
-    res.status(201).json({
-      success: true,
-      message: "palace is submitted for admin approval",
-      palace
-    })
-  } catch (err) {
-    res.status(400).json({
-      success: false,
-      message: "faild create to palace"
-    })
-  }
 
-}
+    return res.status(201).json({
+      success: true,
+      message: "Palace submitted for admin approval",
+      palace,
+    });
+  } catch (err) {
+    console.error("Create palace error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create palace",
+    });
+  }
+};
 const getPalace = async (req, res) => {
   try {
     const palace = await Palace.find({ status: "approved" });
