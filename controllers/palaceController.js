@@ -250,6 +250,7 @@ const deletePalace = async (req, res) => {
     });
   }
 }
+
 const updatePalaceStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -274,6 +275,16 @@ const updatePalaceStatus = async (req, res) => {
       });
     }
 
+    // Notify only the owner of this palace
+    const io = req.app.get("io");
+    const ownerId = palace.owner.toString();
+
+    io.to(`owner:${ownerId}`).emit("palace-status-updated", {
+      palaceId: palace._id.toString(),
+      status: palace.status,
+      message: `Your palace "${palace.name}" has been ${palace.status}.`,
+      palace,
+    });
     return res.status(200).json({
       success: true,
       message: `Palace ${status} successfully`,
@@ -287,7 +298,8 @@ const updatePalaceStatus = async (req, res) => {
       message: "Failed to update palace status",
     });
   }
-}
+};
+
 const getPendingPalaces = async (req, res) => {
   try {
     const palaces = await Palace.find({ status: "pending" })
