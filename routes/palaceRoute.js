@@ -8,7 +8,6 @@ router.post("/",authMiddleware,allowRoles("owner"),upload.array("Images",10),cre
 
 router.get("/",getPalace)
 router.get("/pending",authMiddleware, allowRoles("admin"),getPendingPalaces);
-
 router.get("/:id",getPalaceById)
 router.patch("/:id",authMiddleware,allowRoles("owner"),updatePalace)
 router.delete("/:id",authMiddleware,allowRoles("admin"),deletePalace)
