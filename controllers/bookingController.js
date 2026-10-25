@@ -6,7 +6,7 @@ const createBooking = async (req, res) => {
     const { palaceId, weddingDate, guestCount, specialRequests } = req.body;
 
     if (!palaceId || !weddingDate || !guestCount) {
-      return res.status(400).json({
+      return res.status(40).json({
         success: false,
         message: "Palace, wedding date, and guest count are required",
       });
@@ -48,7 +48,28 @@ const createBooking = async (req, res) => {
         message: "Approved palace not found",
       });
     }
+    // Reject bookings when the entire palace is unavailable
+    if (palace.isAvailable === false) {
+      return res.status(409).json({
+        success: false,
+        message: "This palace is currently unavailable for bookings",
+      });
+    }
 
+    // Reject bookings on dates blocked by the palace owner
+    const requestedDate = date.toISOString().slice(0, 10);
+
+    const isDateUnavailable = (palace.unavailableDates || []).some(
+      (blockedDate) =>
+        new Date(blockedDate).toISOString().slice(0, 10) === requestedDate
+    );
+
+    if (isDateUnavailable) {
+      return res.status(409).json({
+        success: false,
+        message: "This palace is unavailable on the selected wedding date",
+      });
+    }
     // Optional guest capacity validation
     if (guests > Number(palace.capacity)) {
       return res.status(400).json({
@@ -94,7 +115,7 @@ const createBooking = async (req, res) => {
       booking,
     });
   } catch (err) {
-    console.err("Create booking error:", err);
+    console.error("Create booking error:", err);
 
     return res.status(500).json({
       success: false,
@@ -124,7 +145,6 @@ const getMyBookings = async (req, res) => {
     });
   }
 };
-
 const getOwnerBookingRequests = async (req, res) => {
   try {
 
@@ -133,7 +153,6 @@ const getOwnerBookingRequests = async (req, res) => {
     }).select("_id");
 
     const palaceIds = palaces.map((palace) => palace._id);
-
     const bookings = await Booking.find({
       palace: { $in: palaceIds },
     })
@@ -198,6 +217,30 @@ const updateBookingStatus = async (req, res) => {
 
     // Avoid confirming a booking if another confirmed booking exists
     if (bookingStatus === "confirmed") {
+      // Prevent confirmation if the palace is unavailable
+      if (palace.isAvailable === false) {
+        return res.status(409).json({
+          success: false,
+          message: "This palace is currently unavailable",
+        });
+      }
+
+      // Prevent confirmation if the owner blocked this wedding date
+      const bookingDate = new Date(booking.weddingDate)
+        .toISOString()
+        .slice(0, 10);
+
+      const isDateUnavailable = (palace.unavailableDates || []).some(
+        (blockedDate) =>
+          new Date(blockedDate).toISOString().slice(0, 10) === bookingDate
+      );
+
+      if (isDateUnavailable) {
+        return res.status(409).json({
+          success: false,
+          message: "This wedding date has been marked unavailable by the owner",
+        });
+      }
       const startOfDay = new Date(booking.weddingDate);
       startOfDay.setHours(0, 0, 0, 0);
 

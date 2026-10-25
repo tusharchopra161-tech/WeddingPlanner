@@ -341,7 +341,85 @@ const getMyPalace = async (req, res) => {
     });
   }
 };
+const updatePalaceAvailability = async (req, res) => {
+  try {
+    const { date, unavailable } = req.body;
 
-module.exports = { createPalace, getPalace, getPalaceById, updatePalace, deletePalace, updatePalaceStatus, getPendingPalaces, getMyPalace }
+    if (!date || typeof unavailable !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid date and availability status",
+      });
+    }
+
+    // Validate the date format and actual date
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({
+        success: false,
+        message: "Date must use YYYY-MM-DD format",
+      });
+    }
+
+    const selectedDate = new Date(`${date}T00:00:00.000Z`);
+
+    if (
+      Number.isNaN(selectedDate.getTime()) ||
+      selectedDate.toISOString().slice(0, 10) !== date
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid calendar date",
+      });
+    }
+
+    // Only allow the owner to update their own palace
+    const palace = await Palace.findOne({
+      _id: req.params.id,
+      owner: req.user.userId,
+    });
+
+    if (!palace) {
+      return res.status(404).json({
+        success: false,
+        message: "Palace not found or you do not own this palace",
+      });
+    }
+
+    const dateExists = palace.unavailableDates.some(
+      (blockedDate) =>
+        new Date(blockedDate).toISOString().slice(0, 10) === date
+    );
+
+    if (unavailable && !dateExists) {
+      palace.unavailableDates.push(selectedDate);
+    }
+
+    if (!unavailable && dateExists) {
+      palace.unavailableDates = palace.unavailableDates.filter(
+        (blockedDate) =>
+          new Date(blockedDate).toISOString().slice(0, 10) !== date
+      );
+    }
+
+    await palace.save();
+
+    return res.status(200).json({
+      success: true,
+      message: unavailable
+        ? "Date marked unavailable"
+        : "Date marked available",
+      unavailableDates: palace.unavailableDates,
+    });
+  } catch (err) {
+    console.error("Update palace availability error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update palace availability",
+    });
+  }
+};
+
+module.exports = { createPalace, getPalace, getPalaceById, updatePalace, deletePalace, updatePalaceStatus, getPendingPalaces, getMyPalace, updatePalaceAvailability }
 
 

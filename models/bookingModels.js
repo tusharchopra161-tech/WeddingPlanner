@@ -22,7 +22,7 @@ const bookingSchema = new mongoose.Schema(
     guestCount: {
       type: Number,
       required: true,
-      min: 1,
+      min: 100,
     },
 
     totalPrice: {

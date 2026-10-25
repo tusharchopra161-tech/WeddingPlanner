@@ -1,4 +1,4 @@
-const {getMyPalace,createPalace, getPalace, getPalaceById, updatePalace, deletePalace, updatePalaceStatus,getPendingPalaces } = require("../controllers/palaceController");
+const {getMyPalace,createPalace, getPalace, getPalaceById, updatePalace, deletePalace, updatePalaceStatus,getPendingPalaces,updatePalaceAvailability} = require("../controllers/palaceController");
 const router=require("express").Router();
 const authMiddleware = require("../middleware/authMiddelware");
 const allowRoles = require("../middleware/roleMiddelware");
@@ -12,5 +12,5 @@ router.get("/:id",getPalaceById)
 router.patch("/:id",authMiddleware,allowRoles("owner"),updatePalace)
 router.delete("/:id",authMiddleware,allowRoles("admin"),deletePalace)
 router.patch("/:id/status",authMiddleware,allowRoles("admin"),updatePalaceStatus);
-
+router.patch("/:id/availability",authMiddleware,allowRoles("owner"),updatePalaceAvailability);
 module.exports=router;
