@@ -172,8 +172,6 @@ const getOwnerBookingRequests = async (req, res) => {
     });
   }
 };
-
-
 const updateBookingStatus = async (req, res) => {
   try {
     const { bookingId } = req.params;
@@ -290,6 +288,68 @@ const updateBookingStatus = async (req, res) => {
     });
   }
 };
+const getPalaceAvailability = async (req, res) => {
+  try {
+    const { palaceId } = req.params;
+    const { month } = req.query;
 
+    if (!require("mongoose").isValidObjectId(palaceId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid palace ID",
+      });
+    }
 
-module.exports = { updateBookingStatus, createBooking, getMyBookings, getOwnerBookingRequests }
+    if (!/^\d{4}-\d{2}$/.test(month || "")) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid month is required (YYYY-MM)",
+      });
+    }
+
+    const palace = await Palace.findOne({
+      _id: palaceId,
+      status: "approved",
+    }).select("_id isAvailable unavailableDates");
+
+    if (!palace) {
+      return res.status(404).json({
+        success: false,
+        message: "Approved palace not found",
+      });
+    }
+
+    const [year, monthNumber] = month.split("-").map(Number);
+
+    const start = new Date(year, monthNumber - 1, 1);
+    const end = new Date(year, monthNumber, 1);
+
+    const bookings = await Booking.find({
+      palace: palaceId,
+      bookingStatus: "confirmed",
+      weddingDate: { $gte: start, $lt: end },
+    })
+      .select("weddingDate -_id")
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      isAvailable: palace.isAvailable !== false,
+      unavailableDates: (palace.unavailableDates || []).map((date) =>
+        new Date(date).toISOString().slice(0, 10)
+      ),
+      confirmedDates: bookings.map((booking) =>
+        new Date(booking.weddingDate).toISOString().slice(0, 10)
+      ),
+    });
+  } catch (error) {
+    console.error("Get palace availability error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch palace availability",
+    });
+  }
+};
+
+module.exports = { updateBookingStatus, createBooking, getMyBookings, getOwnerBookingRequests,getPalaceAvailability }

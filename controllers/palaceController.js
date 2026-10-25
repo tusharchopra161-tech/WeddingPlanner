@@ -2,7 +2,6 @@ const Palace = require("../models/palaceModels")
 const cloudinary = require("../config/coudinary")
 const {Readable} = require("stream")
 const sendAdminPush = require("../utils/sendAdminPush");
-
 const uploadToCloudinary = (file) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -250,7 +249,6 @@ const deletePalace = async (req, res) => {
     });
   }
 }
-
 const updatePalaceStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -299,7 +297,6 @@ const updatePalaceStatus = async (req, res) => {
     });
   }
 };
-
 const getPendingPalaces = async (req, res) => {
   try {
     const palaces = await Palace.find({ status: "pending" })
@@ -419,6 +416,7 @@ const updatePalaceAvailability = async (req, res) => {
     });
   }
 };
+
 
 module.exports = { createPalace, getPalace, getPalaceById, updatePalace, deletePalace, updatePalaceStatus, getPendingPalaces, getMyPalace, updatePalaceAvailability }
 

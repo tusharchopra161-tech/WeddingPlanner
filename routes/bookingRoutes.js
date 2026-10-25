@@ -6,6 +6,7 @@ const {
     getMyBookings,
     getOwnerBookingRequests,
     updateBookingStatus,
+    getPalaceAvailability,
 } = require("../controllers/bookingController.js");
 
 const authMiddleware = require("../middleware/authMiddelware");
@@ -32,5 +33,5 @@ router.patch(
     allowRoles("owner"),
     updateBookingStatus
 );
-
+router.get("/palace/:palaceId/availability",getPalaceAvailability);
 module.exports = router;
