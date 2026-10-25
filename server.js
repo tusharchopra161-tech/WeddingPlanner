@@ -9,7 +9,7 @@ const cors = require("cors")
 const dotenv = require("dotenv");
 dotenv.config()
 
-const expirePendingBookings=require("./controllers/bookingController")
+const {expirePendingBookings}=require("./controllers/bookingController")
 const userRoute = require("./routes/userRoute");
 const palaceRoute = require("./routes/palaceRoute")
 const bookingRoute = require("./routes/bookingRoutes")
