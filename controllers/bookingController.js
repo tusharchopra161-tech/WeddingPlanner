@@ -1,12 +1,28 @@
 const Booking = require("../models/bookingModels.js")
 const Palace = require("../models/palaceModels.js");
 
+const expirePendingBookings = async (palaceId = null) => {
+  const now = new Date();
+
+  const filter = {
+    bookingStatus: "pending",
+    holdExpiresAt: { $ne: null, $lte: now },
+  };
+
+  if (palaceId) {
+    filter.palace = palaceId;
+  }
+
+  await Booking.updateMany(filter, {
+    $set: { bookingStatus: "expired" },
+  });
+};
 const createBooking = async (req, res) => {
   try {
     const { palaceId, weddingDate, guestCount, specialRequests } = req.body;
 
     if (!palaceId || !weddingDate || !guestCount) {
-      return res.status(40).json({
+      return res.status(400).json({
         success: false,
         message: "Palace, wedding date, and guest count are required",
       });
@@ -83,20 +99,37 @@ const createBooking = async (req, res) => {
 
     const nextDay = new Date(startOfDay);
     nextDay.setDate(nextDay.getDate() + 1);
+
+
     // Prevent booking a date already reserved by a confirmed booking
+    // Mark expired holds before checking date availability.
+    await expirePendingBookings(palaceId);
+
     const existingBooking = await Booking.findOne({
       palace: palaceId,
       weddingDate: {
         $gte: startOfDay,
         $lt: nextDay,
       },
-      bookingStatus: "confirmed",
+      bookingStatus: { $in: ["confirmed", "pending"] },
+      $or: [
+        { bookingStatus: "confirmed" },
+        {
+          bookingStatus: "pending",
+          holdExpiresAt: { $gt: new Date() },
+        },
+      ],
     });
 
     if (existingBooking) {
+      const message =
+        existingBooking.bookingStatus === "confirmed"
+          ? "This palace is already booked for that date"
+          : "Another customer has temporarily reserved this date. Please select another date.";
+
       return res.status(409).json({
         success: false,
-        message: "This palace is already booked for that date",
+        message,
       });
     }
 
@@ -106,7 +139,9 @@ const createBooking = async (req, res) => {
       weddingDate: startOfDay,
       guestCount: guests,
       totalPrice: Number(palace.price),
-      specialRequests: typeof specialRequests === "string" ? specialRequests.trim() : "",
+      specialRequests:
+        typeof specialRequests === "string" ? specialRequests.trim() : "",
+      holdExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     return res.status(201).json({
@@ -123,8 +158,6 @@ const createBooking = async (req, res) => {
     });
   }
 };
-
-
 const getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({
@@ -205,7 +238,16 @@ const updateBookingStatus = async (req, res) => {
         message: "You cannot update bookings for another owner's palace"
       });
     }
+    // Expire this request if its hold has ended.
+    if (booking.bookingStatus === "pending" && booking.holdExpiresAt && booking.holdExpiresAt <= new Date()) {
+      booking.bookingStatus = "expired";
+      await booking.save();
 
+      return res.status(410).json({
+        success: false,
+        message: "This booking request has expired. The customer must submit a new request.",
+      });
+    }
     if (booking.bookingStatus !== "pending") {
       return res.status(400).json({
         success: false,
@@ -264,6 +306,11 @@ const updateBookingStatus = async (req, res) => {
     }
 
     booking.bookingStatus = bookingStatus;
+    // Release the hold after rejection.
+    // Confirmed bookings remain unavailable through bookingStatus.
+    if (bookingStatus === "rejected") {
+      booking.holdExpiresAt = null;
+    }
     await booking.save();
 
     return res.status(200).json({
@@ -292,7 +339,7 @@ const getPalaceAvailability = async (req, res) => {
   try {
     const { palaceId } = req.params;
     const { month } = req.query;
-
+    await expirePendingBookings(palaceId);
     if (!require("mongoose").isValidObjectId(palaceId)) {
       return res.status(400).json({
         success: false,
@@ -326,11 +373,28 @@ const getPalaceAvailability = async (req, res) => {
 
     const bookings = await Booking.find({
       palace: palaceId,
-      bookingStatus: "confirmed",
+      bookingStatus: { $in: ["confirmed", "pending"] },
       weddingDate: { $gte: start, $lt: end },
     })
-      .select("weddingDate -_id")
+      .select("weddingDate bookingStatus holdExpiresAt -_id")
       .lean();
+      
+    const confirmedDates = bookings
+      .filter((booking) => booking.bookingStatus === "confirmed")
+      .map((booking) =>
+        new Date(booking.weddingDate).toISOString().slice(0, 10)
+      );
+
+    const pendingDates = bookings
+      .filter(
+        (booking) =>
+          booking.bookingStatus === "pending" &&
+          booking.holdExpiresAt &&
+          new Date(booking.holdExpiresAt) > new Date()
+      )
+      .map((booking) =>
+        new Date(booking.weddingDate).toISOString().slice(0, 10)
+      );
 
     return res.status(200).json({
       success: true,
@@ -338,9 +402,8 @@ const getPalaceAvailability = async (req, res) => {
       unavailableDates: (palace.unavailableDates || []).map((date) =>
         new Date(date).toISOString().slice(0, 10)
       ),
-      confirmedDates: bookings.map((booking) =>
-        new Date(booking.weddingDate).toISOString().slice(0, 10)
-      ),
+      confirmedDates,
+      pendingDates,
     });
   } catch (error) {
     console.error("Get palace availability error:", error);
@@ -352,4 +415,4 @@ const getPalaceAvailability = async (req, res) => {
   }
 };
 
-module.exports = { updateBookingStatus, createBooking, getMyBookings, getOwnerBookingRequests,getPalaceAvailability }
+module.exports = { updateBookingStatus, createBooking, getMyBookings, getOwnerBookingRequests, getPalaceAvailability, expirePendingBookings }

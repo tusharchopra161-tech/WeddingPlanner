@@ -1,4 +1,4 @@
-const mongoose= require("mongoose");
+const mongoose = require("mongoose");
 
 const bookingSchema = new mongoose.Schema(
   {
@@ -33,7 +33,7 @@ const bookingSchema = new mongoose.Schema(
 
     bookingStatus: {
       type: String,
-      enum: ["pending", "confirmed", "rejected", "cancelled"],
+      enum: ["pending", "confirmed", "rejected", "cancelled", "expired"],
       default: "pending",
     },
 
@@ -42,7 +42,12 @@ const bookingSchema = new mongoose.Schema(
       enum: ["unpaid", "paid", "refunded"],
       default: "unpaid",
     },
-
+    // Deadline for a pending booking to reserve its date.
+    // Do not use a MongoDB TTL index on this field.
+    holdExpiresAt: {
+      type: Date,
+      default: null,
+    },
     specialRequests: {
       type: String,
       default: "",
@@ -50,7 +55,12 @@ const bookingSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+// Supports queries for bookings by palace, date and status.
+bookingSchema.index({
+  palace: 1,
+  weddingDate: 1,
+  bookingStatus: 1,
+});
 const Booking = mongoose.model("Booking", bookingSchema);
 
-module.exports= Booking
+module.exports = Booking
