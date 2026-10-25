@@ -1,3 +1,4 @@
+const cron = require("node-cron");
 const express = require("express")
 const mongoose = require("mongoose")
 const http = require("http");
@@ -8,6 +9,7 @@ const cors = require("cors")
 const dotenv = require("dotenv");
 dotenv.config()
 
+const expirePendingBookings=require("./controllers/bookingController")
 const userRoute = require("./routes/userRoute");
 const palaceRoute = require("./routes/palaceRoute")
 const bookingRoute = require("./routes/bookingRoutes")
@@ -54,10 +56,9 @@ io.use(async (socket, next) => {
         }
         const user = await User.findById(userId);
 
-        if (!user ||!["admin","owner"].includes(user.role) ) {
+        if (!user ||!["admin","owner","user"].includes(user.role) ) {
             return next(new Error("access denied"));
         }
-
         socket.user = user;
         next();
     } catch (error) {
@@ -68,6 +69,7 @@ io.use(async (socket, next) => {
 app.set("io", io);
 io.on("connection", (socket) => {
     const user = socket.user;
+    const userId = user._id.toString();
     // Admins receive admin notifications
     if (user.role === "admin") {
         socket.join("admins");
@@ -79,8 +81,12 @@ io.on("connection", (socket) => {
         socket.join(`owner:${user._id.toString()}`);
         console.log("Owner socket connected:", socket.id);
     }
+    if (user.role === "user") {
+        socket.join(`user:${userId}`);
+        console.log("Customer socket connected:", socket.id);
+    }
     socket.on("disconnect", () => {
-        console.log("Admin disconnected:", socket.id)
+        console.log(`${user.role} disconnected:`, socket.id);
     })
 
 })
@@ -96,17 +102,33 @@ app.use("/palace", palaceRoute)
 app.use("/booking", bookingRoute)
 app.use("/push", pushRoute)
 
+
 const startServer = async () => {
-    try {
-        await connectDB();
-        console.log("Connected database:", mongoose.connection.name);
-        server.listen(port, () => {
-            console.log(`server is running at port: ${port}`)
-        })
-    } catch (err) {
-        console.log("server startup failed:", err)
-    }
-}
+  try {
+    await connectDB();
+    console.log("Connected database:", mongoose.connection.name);
+
+    // Process any overdue bookings when the server starts.
+    await expirePendingBookings(null, io);
+
+    // Check for expired booking holds every minute.
+    cron.schedule("* * * * *", async () => {
+      try {
+        await expirePendingBookings(null, io);
+      } catch (error) {
+        console.error("Automatic booking expiry failed:", error);
+      }
+    });
+
+    console.log("Booking expiry scheduler started.");
+
+    server.listen(port, () => {
+      console.log(`server is running at port: ${port}`);
+    });
+  } catch (err) {
+    console.error("Server startup failed:", err);
+  }
+};
 
 // app.listen(port, async () => {
 //     await connectDB();

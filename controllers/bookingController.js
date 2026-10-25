@@ -1,7 +1,13 @@
 const Booking = require("../models/bookingModels.js")
 const Palace = require("../models/palaceModels.js");
 
-const expirePendingBookings = async (palaceId = null) => {
+const sendBookingNotification = (io, role, userId, event, data) => {
+  if (!io || !role || !userId) return;
+
+  io.to(`${role}:${userId}`).emit(event, data);
+};
+
+const expirePendingBookings = async (palaceId = null, io = null) => {
   const now = new Date();
 
   const filter = {
@@ -16,13 +22,81 @@ const expirePendingBookings = async (palaceId = null) => {
     filter.palace = palaceId;
   }
 
-  await Booking.updateMany(filter, {
-    $set: {
-      bookingStatus: "expired",
-      holdExpiresAt: null,
-    },
-  });
+  // Fetch candidates with the palace owner so both parties can be notified.
+  const expiredCandidates = await Booking.find(filter)
+    .select("_id user palace")
+    .populate("palace", "owner name")
+    .limit(500)
+    .lean();
+
+  let expiredCount = 0;
+
+  for (const candidate of expiredCandidates) {
+    // Atomically expire only if this booking is still pending and overdue.
+    // This prevents overlapping jobs from notifying twice for the same expiry.
+    const expiredBooking = await Booking.findOneAndUpdate(
+      {
+        _id: candidate._id,
+        bookingStatus: "pending",
+        $or: [
+          { holdExpiresAt: { $lte: now } },
+          { holdExpiresAt: null },
+        ],
+      },
+      {
+        $set: {
+          bookingStatus: "expired",
+          holdExpiresAt: null,
+        },
+      },
+      { new: true }
+    );
+
+    if (!expiredBooking) continue;
+
+    expiredCount++;
+
+    const userId = candidate.user?.toString();
+    const palace = candidate.palace;
+    const ownerId = palace?.owner?.toString();
+
+    // Notify the customer.
+    sendBookingNotification(
+      io,
+      "user",
+      userId,
+      "booking-status-updated",
+      {
+        bookingId: expiredBooking._id.toString(),
+        palaceId: expiredBooking.palace.toString(),
+        bookingStatus: "expired",
+        message:
+          "Your booking request has expired. Please submit a new request.",
+      }
+    );
+
+    // Notify the palace owner.
+    sendBookingNotification(
+      io,
+      "owner",
+      ownerId,
+      "booking-request-expired",
+      {
+        bookingId: expiredBooking._id.toString(),
+        palaceId: expiredBooking.palace.toString(),
+        bookingStatus: "expired",
+        message: `A booking request for "${palace?.name || "your palace"}" has expired.`,
+      }
+    );
+  }
+
+  if (expiredCount > 0) {
+    console.log(`Expired ${expiredCount} booking(s).`);
+  }
+
+  return expiredCount;
 };
+
 const createBooking = async (req, res) => {
   try {
     const { palaceId, weddingDate, guestCount, specialRequests } = req.body;
@@ -109,8 +183,7 @@ const createBooking = async (req, res) => {
 
     // Prevent booking a date already reserved by a confirmed booking
     // Mark expired holds before checking date availability.
-    await expirePendingBookings(palaceId);
-
+    await expirePendingBookings(palaceId, req.app.get("io"));
     const existingBooking = await Booking.findOne({
       palace: palaceId,
       weddingDate: {
@@ -149,7 +222,20 @@ const createBooking = async (req, res) => {
         typeof specialRequests === "string" ? specialRequests.trim() : "",
       holdExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
+    const io = req.app.get("io");
 
+    sendBookingNotification(
+      io,
+      "owner",
+      palace.owner.toString(),
+      "new-booking-request",
+      {
+        bookingId: booking._id.toString(),
+        palaceId: palace._id.toString(),
+        weddingDate: booking.weddingDate,
+        message: `You have a new booking request for "${palace.name}".`,
+      }
+    );
     return res.status(201).json({
       success: true,
       message: "Booking request submitted successfully",
@@ -319,7 +405,20 @@ const updateBookingStatus = async (req, res) => {
       booking.holdExpiresAt = null;
     }
     await booking.save();
+    const io = req.app.get("io");
 
+    sendBookingNotification(
+      io,
+      "user",
+      booking.user.toString(),
+      "booking-status-updated",
+      {
+        bookingId: booking._id.toString(),
+        palaceId: booking.palace.toString(),
+        bookingStatus: booking.bookingStatus,
+        message: `Your booking request has been ${booking.bookingStatus}.`,
+      }
+    );
     return res.status(200).json({
       success: true,
       message: `Booking ${bookingStatus} successfully`,
@@ -359,7 +458,7 @@ const getPalaceAvailability = async (req, res) => {
         message: "A valid month is required (YYYY-MM)",
       });
     }
-    await expirePendingBookings(palaceId);
+    await expirePendingBookings(palaceId, req.app.get("io"));
     const palace = await Palace.findOne({
       _id: palaceId,
       status: "approved",
