@@ -6,7 +6,10 @@ const expirePendingBookings = async (palaceId = null) => {
 
   const filter = {
     bookingStatus: "pending",
-    holdExpiresAt: { $ne: null, $lte: now },
+    $or: [
+      { holdExpiresAt: { $lte: now } },
+      { holdExpiresAt: null },
+    ],
   };
 
   if (palaceId) {
@@ -14,7 +17,10 @@ const expirePendingBookings = async (palaceId = null) => {
   }
 
   await Booking.updateMany(filter, {
-    $set: { bookingStatus: "expired" },
+    $set: {
+      bookingStatus: "expired",
+      holdExpiresAt: null,
+    },
   });
 };
 const createBooking = async (req, res) => {
@@ -239,8 +245,9 @@ const updateBookingStatus = async (req, res) => {
       });
     }
     // Expire this request if its hold has ended.
-    if (booking.bookingStatus === "pending" && booking.holdExpiresAt && booking.holdExpiresAt <= new Date()) {
+    if (booking.bookingStatus === "pending" && (!booking.holdExpiresAt || booking.holdExpiresAt <= new Date())) {
       booking.bookingStatus = "expired";
+      booking.holdExpiresAt = null;
       await booking.save();
 
       return res.status(410).json({
@@ -339,7 +346,6 @@ const getPalaceAvailability = async (req, res) => {
   try {
     const { palaceId } = req.params;
     const { month } = req.query;
-    await expirePendingBookings(palaceId);
     if (!require("mongoose").isValidObjectId(palaceId)) {
       return res.status(400).json({
         success: false,
@@ -353,7 +359,7 @@ const getPalaceAvailability = async (req, res) => {
         message: "A valid month is required (YYYY-MM)",
       });
     }
-
+    await expirePendingBookings(palaceId);
     const palace = await Palace.findOne({
       _id: palaceId,
       status: "approved",
@@ -378,7 +384,7 @@ const getPalaceAvailability = async (req, res) => {
     })
       .select("weddingDate bookingStatus holdExpiresAt -_id")
       .lean();
-      
+
     const confirmedDates = bookings
       .filter((booking) => booking.bookingStatus === "confirmed")
       .map((booking) =>
