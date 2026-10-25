@@ -49,7 +49,9 @@ const expirePendingBookings = async (palaceId = null, io = null) => {
           holdExpiresAt: null,
         },
       },
-      { new: true }
+      {
+        returnDocument: "after"
+      }
     );
 
     if (!expiredBooking) continue;
