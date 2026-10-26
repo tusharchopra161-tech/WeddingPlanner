@@ -14,6 +14,7 @@ const userRoute = require("./routes/userRoute");
 const palaceRoute = require("./routes/palaceRoute")
 const bookingRoute = require("./routes/bookingRoutes")
 const pushRoute = require("./routes/pushRoutes")
+const notificationRoute=require("./routes/notificationRoutes")
 const connectDB = require("./config/db")
 
 const app = express()
@@ -101,7 +102,7 @@ app.use("/user", userRoute);
 app.use("/palace", palaceRoute)
 app.use("/booking", bookingRoute)
 app.use("/push", pushRoute)
-
+app.use("/notifications",notificationRoute)
 
 const startServer = async () => {
   try {

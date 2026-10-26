@@ -5,7 +5,6 @@ const allowRoles = require("../middleware/roleMiddelware");
 const upload = require("../middleware/uploadMiddelware")
 router.get("/my",authMiddleware,allowRoles("owner"),getMyPalace);
 router.post("/",authMiddleware,allowRoles("owner"),upload.array("Images",10),createPalace);
-
 router.get("/",getPalace)
 router.get("/pending",authMiddleware, allowRoles("admin"),getPendingPalaces);
 router.get("/:id",getPalaceById)

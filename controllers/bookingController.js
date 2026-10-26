@@ -1,15 +1,72 @@
 const Booking = require("../models/bookingModels.js")
 const Palace = require("../models/palaceModels.js");
-
+const Notification = require("../models/notificationModel.js")
 const sendBookingNotification = (io, role, userId, event, data) => {
   if (!io || !role || !userId) return;
 
   io.to(`${role}:${userId}`).emit(event, data);
 };
 
+const createAndSendBookingNotification = async (
+  io,
+  {
+    recipientId,
+    role,
+    type,
+    title,
+    message,
+    bookingId,
+    palaceId,
+    event,
+    bookingStatus,
+  }
+) => {
+  if (!recipientId) return;
+
+  // Save the notification in MongoDB first.
+  const notification = await Notification.create({
+    recipient: recipientId,
+    role,
+    type,
+    title,
+    message,
+    booking: bookingId || null,
+    palace: palaceId || null,
+    ...(bookingStatus ? { bookingStatus } : {}),
+  });
+
+  // Preserve the existing Socket.IO event and add the saved notification ID.
+  const payload = {
+    id: notification._id.toString(),
+    bookingId: bookingId?.toString(),
+    palaceId: palaceId?.toString(),
+    message,
+    title,
+    type,
+    createdAt: notification.createdAt,
+    read: false,
+  };
+
+  // Add status fields only when a status is supplied.
+  if (bookingStatus) {
+    payload.bookingStatus = bookingStatus;
+    payload.status = bookingStatus;
+  }
+
+  sendBookingNotification(
+    io,
+    role,
+    recipientId.toString(),
+    event,
+    payload
+  );
+
+  return notification;
+};
+
+
 const expirePendingBookings = async (palaceId = null, io = null) => {
   const now = new Date();
-
   const filter = {
     bookingStatus: "pending",
     $or: [
@@ -63,33 +120,34 @@ const expirePendingBookings = async (palaceId = null, io = null) => {
     const ownerId = palace?.owner?.toString();
 
     // Notify the customer.
-    sendBookingNotification(
-      io,
-      "user",
-      userId,
-      "booking-status-updated",
-      {
-        bookingId: expiredBooking._id.toString(),
-        palaceId: expiredBooking.palace.toString(),
-        bookingStatus: "expired",
-        message:
-          "Your booking request has expired. Please submit a new request.",
-      }
-    );
+    await createAndSendBookingNotification(io, {
+      recipientId: userId,
+      role: "user",
+      type: "booking-expired",
+      title: "Booking expired",
+      message:
+        "Your booking request has expired. Please submit a new request.",
+      bookingId: expiredBooking._id,
+      palaceId: expiredBooking.palace,
+      event: "booking-status-updated",
+      bookingStatus: "expired",
+    });
+
 
     // Notify the palace owner.
-    sendBookingNotification(
-      io,
-      "owner",
-      ownerId,
-      "booking-request-expired",
-      {
-        bookingId: expiredBooking._id.toString(),
-        palaceId: expiredBooking.palace.toString(),
-        bookingStatus: "expired",
+    if (ownerId) {
+      await createAndSendBookingNotification(io, {
+        recipientId: ownerId,
+        role: "owner",
+        type: "booking-expired",
+        title: "Booking expired",
         message: `A booking request for "${palace?.name || "your palace"}" has expired.`,
-      }
-    );
+        bookingId: expiredBooking._id,
+        palaceId: expiredBooking.palace,
+        event: "booking-request-expired",
+        bookingStatus: "expired",
+      });
+    }
   }
 
   if (expiredCount > 0) {
@@ -226,18 +284,18 @@ const createBooking = async (req, res) => {
     });
     const io = req.app.get("io");
 
-    sendBookingNotification(
-      io,
-      "owner",
-      palace.owner.toString(),
-      "new-booking-request",
-      {
-        bookingId: booking._id.toString(),
-        palaceId: palace._id.toString(),
-        weddingDate: booking.weddingDate,
-        message: `You have a new booking request for "${palace.name}".`,
-      }
-    );
+
+    await createAndSendBookingNotification(req.app.get("io"), {
+      recipientId: palace.owner,
+      role: "owner",
+      type: "booking-request",
+      title: "New booking request",
+      message: `You have a new booking request for "${palace.name}".`,
+      bookingId: booking._id,
+      palaceId: palace._id,
+      event: "new-booking-request",
+    });
+
     return res.status(201).json({
       success: true,
       message: "Booking request submitted successfully",
@@ -333,16 +391,49 @@ const updateBookingStatus = async (req, res) => {
       });
     }
     // Expire this request if its hold has ended.
+
+    // Expire this request if its hold has ended.
     if (booking.bookingStatus === "pending" && (!booking.holdExpiresAt || booking.holdExpiresAt <= new Date())) {
       booking.bookingStatus = "expired";
       booking.holdExpiresAt = null;
       await booking.save();
 
+      const io = req.app.get("io");
+
+
+      await createAndSendBookingNotification(io, {
+        recipientId: booking.user,
+        role: "user",
+        type: "booking-expired",
+        title: "Booking expired",
+        message:
+          "Your booking request has expired. Please submit a new request.",
+        bookingId: booking._id,
+        palaceId: booking.palace,
+        event: "booking-status-updated",
+        bookingStatus: "expired",
+      });
+
+      await createAndSendBookingNotification(io, {
+        recipientId: palace.owner,
+        role: "owner",
+        type: "booking-expired",
+        title: "Booking expired",
+        message: `A booking request for "${palace.name || "your palace"}" has expired.`,
+        bookingId: booking._id,
+        palaceId: booking.palace,
+        event: "booking-request-expired",
+        bookingStatus: "expired",
+      });
+
+
       return res.status(410).json({
         success: false,
-        message: "This booking request has expired. The customer must submit a new request.",
+        message:
+          "This booking request has expired. The customer must submit a new request.",
       });
     }
+
     if (booking.bookingStatus !== "pending") {
       return res.status(400).json({
         success: false,
@@ -409,18 +500,19 @@ const updateBookingStatus = async (req, res) => {
     await booking.save();
     const io = req.app.get("io");
 
-    sendBookingNotification(
-      io,
-      "user",
-      booking.user.toString(),
-      "booking-status-updated",
-      {
-        bookingId: booking._id.toString(),
-        palaceId: booking.palace.toString(),
-        bookingStatus: booking.bookingStatus,
-        message: `Your booking request has been ${booking.bookingStatus}.`,
-      }
-    );
+
+    await createAndSendBookingNotification(io, {
+      recipientId: booking.user,
+      role: "user",
+      type: "booking-status",
+      title: `Booking ${booking.bookingStatus}`,
+      message: `Your booking request has been ${booking.bookingStatus}.`,
+      bookingId: booking._id,
+      palaceId: booking.palace,
+      event: "booking-status-updated",
+      bookingStatus: booking.bookingStatus,
+    });
+
     return res.status(200).json({
       success: true,
       message: `Booking ${bookingStatus} successfully`,
