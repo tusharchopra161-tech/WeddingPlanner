@@ -280,7 +280,7 @@ const createBooking = async (req, res) => {
       totalPrice: Number(palace.price),
       specialRequests:
         typeof specialRequests === "string" ? specialRequests.trim() : "",
-      holdExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      holdExpiresAt: new Date(Date.now() + 60 * 1000),
     });
     const io = req.app.get("io");
 
