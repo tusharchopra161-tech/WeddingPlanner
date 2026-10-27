@@ -6,7 +6,6 @@ const sendBookingNotification = (io, role, userId, event, data) => {
 
   io.to(`${role}:${userId}`).emit(event, data);
 };
-
 const createAndSendBookingNotification = async (
   io,
   {
@@ -63,8 +62,6 @@ const createAndSendBookingNotification = async (
 
   return notification;
 };
-
-
 const expirePendingBookings = async (palaceId = null, io = null) => {
   const now = new Date();
   const filter = {
@@ -156,7 +153,6 @@ const expirePendingBookings = async (palaceId = null, io = null) => {
 
   return expiredCount;
 };
-
 const createBooking = async (req, res) => {
   try {
     const { palaceId, weddingDate, guestCount, specialRequests } = req.body;
@@ -280,7 +276,7 @@ const createBooking = async (req, res) => {
       totalPrice: Number(palace.price),
       specialRequests:
         typeof specialRequests === "string" ? specialRequests.trim() : "",
-      holdExpiresAt: new Date(Date.now() + 60 * 1000),
+      holdExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
     const io = req.app.get("io");
 
