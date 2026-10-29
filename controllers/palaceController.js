@@ -101,8 +101,6 @@ const createPalace = async (req, res) => {
         : isAvailable === "false" ? false : isAvailable,
       status: "pending",
     });
-
-
     const io = req.app.get("io");
 
     if (io) {

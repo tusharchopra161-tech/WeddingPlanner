@@ -307,8 +307,8 @@ const createBooking = async (req, res) => {
       holdExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
     const io = req.app.get("io");
-    const userName = User.findOne({ _id: req.user.userId })
-    await createAndSendBookingNotification(req.app.get("io"), {
+    const user = await User.findById(req.user.userId).select("name");
+    const userName = user?.name || "Unknown User"; await createAndSendBookingNotification(req.app.get("io"), {
       recipientId: palace.owner,
       role: "owner",
       type: "booking-request",
