@@ -1,6 +1,7 @@
 const Palace = require("../models/palaceModels")
 const cloudinary = require("../config/coudinary")
-const {Readable} = require("stream")
+const { Readable } = require("stream")
+const sendUserPush = require("../utils/sendUserPush")
 const sendAdminPush = require("../utils/sendAdminPush");
 const uploadToCloudinary = (file) => {
   return new Promise((resolve, reject) => {
@@ -101,7 +102,7 @@ const createPalace = async (req, res) => {
       status: "pending",
     });
 
-    
+
     const io = req.app.get("io");
 
     if (io) {
@@ -276,13 +277,24 @@ const updatePalaceStatus = async (req, res) => {
     // Notify only the owner of this palace
     const io = req.app.get("io");
     const ownerId = palace.owner.toString();
-
-    io.to(`owner:${ownerId}`).emit("palace-status-updated", {
-      palaceId: palace._id.toString(),
-      status: palace.status,
-      message: `Your palace "${palace.name}" has been ${palace.status}.`,
-      palace,
-    });
+    if (io) {
+      io.to(`owner:${ownerId}`).emit("palace-status-updated", {
+        palaceId: palace._id.toString(),
+        status: palace.status,
+        message: `Your palace "${palace.name}" has been ${palace.status}.`,
+        palace,
+      });
+    }
+    try {
+      await sendUserPush(ownerId, {
+        title: `Palace ${palace.status}`,
+        message: `Your palace "${palace.name}" has been ${palace.status}.`,
+        url: "/owner-dashboard",
+        tag: `palace-status-${palace._id}`,
+      });
+    } catch (error) {
+      console.error("Failed to send palace status push:", error.message);
+    }
     return res.status(200).json({
       success: true,
       message: `Palace ${status} successfully`,

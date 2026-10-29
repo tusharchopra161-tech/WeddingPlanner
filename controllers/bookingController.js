@@ -1,6 +1,8 @@
 const Booking = require("../models/bookingModels.js")
 const Palace = require("../models/palaceModels.js");
 const Notification = require("../models/notificationModel.js")
+const sendUserPush = require("../utils/sendUserPush.js");
+const User = require("../models/userModels.js");
 const sendBookingNotification = (io, role, userId, event, data) => {
   if (!io || !role || !userId) return;
 
@@ -129,7 +131,20 @@ const expirePendingBookings = async (palaceId = null, io = null) => {
       event: "booking-status-updated",
       bookingStatus: "expired",
     });
-
+    try {
+      await sendUserPush(userId, {
+        title: "Booking expired",
+        message:
+          "Your booking request has expired. Please submit a new request.",
+        url: "/",
+        tag: `booking-expired-${expiredBooking._id}`,
+      });
+    } catch (pushError) {
+      console.error(
+        "Customer booking-expiry push failed:",
+        pushError.message
+      );
+    }
 
     // Notify the palace owner.
     if (ownerId) {
@@ -144,6 +159,19 @@ const expirePendingBookings = async (palaceId = null, io = null) => {
         event: "booking-request-expired",
         bookingStatus: "expired",
       });
+      try {
+        await sendUserPush(ownerId, {
+          title: "Booking request expired",
+          message: `A booking request for "${palace?.name || "your palace"}" has expired.`,
+          url: "/owner-dashboard",
+          tag: `booking-expired-${expiredBooking._id}`,
+        });
+      } catch (pushError) {
+        console.error(
+          "Owner booking-expiry push failed:",
+          pushError.message
+        );
+      }
     }
   }
 
@@ -279,19 +307,23 @@ const createBooking = async (req, res) => {
       holdExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
     const io = req.app.get("io");
-
-
+    const userName = User.findOne({ _id: req.user.userId })
     await createAndSendBookingNotification(req.app.get("io"), {
       recipientId: palace.owner,
       role: "owner",
       type: "booking-request",
       title: "New booking request",
-      message: `You have a new booking request for "${palace.name}".`,
+      message: `You have a new booking request from "${userName}".`,
       bookingId: booking._id,
       palaceId: palace._id,
       event: "new-booking-request",
     });
-
+    await sendUserPush(palace.owner, {
+      title: "New booking request",
+      message: `You have a new booking request from "${userName}".`,
+      url: "/owner-dashboard",
+      tag: `booking-${booking._id}`,
+    });
     return res.status(201).json({
       success: true,
       message: "Booking request submitted successfully",
@@ -421,8 +453,6 @@ const updateBookingStatus = async (req, res) => {
         event: "booking-request-expired",
         bookingStatus: "expired",
       });
-
-
       return res.status(410).json({
         success: false,
         message:
@@ -508,7 +538,16 @@ const updateBookingStatus = async (req, res) => {
       event: "booking-status-updated",
       bookingStatus: booking.bookingStatus,
     });
-
+    try {
+      await sendUserPush(booking.user, {
+        title: `Booking ${booking.bookingStatus}`,
+        message: `Your booking request has been ${booking.bookingStatus}.`,
+        url: "/",
+        tag: `booking-${booking._id}`,
+      });
+    } catch (pushError) {
+      console.error("Booking push notification error:", pushError.message);
+    }
     return res.status(200).json({
       success: true,
       message: `Booking ${bookingStatus} successfully`,
