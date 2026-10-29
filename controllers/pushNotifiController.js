@@ -18,17 +18,12 @@ const ggetPublicKey=(req, res) => {
 const enableNotification=async (req, res) => {
     try {
       const subscription = req.body;
-      if (
-        !subscription?.endpoint ||
-        !subscription?.keys?.p256dh ||
-        !subscription?.keys?.auth
-      ) {
+      if (!subscription?.endpoint ||!subscription?.keys?.p256dh ||!subscription?.keys?.auth) {
         return res.status(400).json({
           success: false,
           message: "Invalid push subscription",
         });
       }
-
       await PushSubscription.findOneAndUpdate(
         { endpoint: subscription.endpoint },
         {
