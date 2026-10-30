@@ -2,6 +2,10 @@ const JourneyArrival = require("../models/journeyArrivalModel");
 const Palace = require("../models/palaceModels");
 const sendUserPush = require("../utils/sendUserPush");
 const notifyJourneyArrival = async (req, res) => {
+  console.log("========== JOURNEY ARRIVAL REQUEST ==========");
+console.log("User:", req.user?._id);
+console.log("Role:", req.user?.role);
+console.log("Body:", req.body);
   try {
     // Only customers can use palace navigation.
     if (req.user.role !== "user") {
@@ -42,6 +46,7 @@ const notifyJourneyArrival = async (req, res) => {
         palace: palace._id,
         notificationStatus: "pending",
       });
+      console.log("Journey arrival document saved:", arrival._id);
     } catch (error) {
       if (error.code === 11000) {
         return res.status(200).json({
