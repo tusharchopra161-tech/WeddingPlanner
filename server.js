@@ -16,7 +16,7 @@ const bookingRoute = require("./routes/bookingRoutes")
 const pushRoute = require("./routes/pushRoutes")
 const notificationRoute=require("./routes/notificationRoutes")
 const connectDB = require("./config/db")
-
+const journeyArrivalRoute = require("./routes/journeyArrivalRoutes")
 const app = express()
 const server = http.createServer(app)
 const allowedOrigins = ["https://weddinplanner-frontend.vercel.app",
@@ -32,7 +32,6 @@ app.use(cors(
     }))
 
 app.use(express.json())
-
 const io = new Server(server, {
     cors: {
         origin: allowedOrigins,
@@ -91,7 +90,6 @@ io.on("connection", (socket) => {
     })
 
 })
-
 const port = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
@@ -103,7 +101,7 @@ app.use("/palace", palaceRoute)
 app.use("/booking", bookingRoute)
 app.use("/push", pushRoute)
 app.use("/notifications",notificationRoute)
-
+app.use("/journey-arrival", journeyArrivalRoute);
 const startServer = async () => {
   try {
     await connectDB();

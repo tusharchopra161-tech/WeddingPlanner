@@ -58,7 +58,7 @@ const createPalace = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Please enter a valid price and capacity",
+        message: "Please enter a valid price and capacity aboube 100 person",
       });
     }
 
