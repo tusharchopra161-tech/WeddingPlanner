@@ -20,6 +20,21 @@ const palaceSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    coordinates:{
+        latitude:{
+            type:Number,
+            min:-90,
+            max:90,
+            required:true
+        },
+        longitude:{
+            type:Number,
+            min:-180,
+            max:180,
+            required:true
+
+        }
+    },
     description: {
         type: String,
         required: true
@@ -32,7 +47,7 @@ const palaceSchema = new mongoose.Schema({
     capacity: {
         type: Number,
         required: true,
-        min: 1
+        min: 100
     },
     facilities: [{ type: String }],
     isAvailable: {

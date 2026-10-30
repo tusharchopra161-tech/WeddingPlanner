@@ -32,6 +32,7 @@ const createPalace = async (req, res) => {
       capacity,
       facilities,
       isAvailable,
+      coordinates,
     } = req.body;
 
     const files = req.files || [];
@@ -53,7 +54,7 @@ const createPalace = async (req, res) => {
       !Number.isFinite(Number(price)) ||
       Number(price) < 0 ||
       !Number.isInteger(Number(capacity)) ||
-      Number(capacity) < 1
+      Number(capacity) < 100
     ) {
       return res.status(400).json({
         success: false,
@@ -86,12 +87,30 @@ const createPalace = async (req, res) => {
         message: "Facilities must be an array",
       });
     }
+    let parsedCoordinates;
+    try {
+      parsedCoordinates = typeof coordinates === "string" ? JSON.parse(coordinates) : coordinates;
+    } catch {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid palace coordinates",
+      });
+    }
+    const latitude = Number(parsedCoordinates?.latitude);
+    const longitude = Number(parsedCoordinates?.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return res.status(400).json({
+        success: false,
+        message: "Please select a valid palace location on the map",
+      });
+    }
 
     const palace = await Palace.create({
       owner: req.user.userId,
       Images: imageUrls,
       name: name.trim(),
       location: location.trim(),
+      coordinates: {latitude,longitude},
       description: description.trim(),
       price: Number(price),
       capacity: Number(capacity),
