@@ -116,6 +116,7 @@ const checkUser = async (req, res) => {
     }
 }
 const googleAuth = async (req, res) => {
+    console.log("gogle auth")
     try {
         const { credential } = req.body;
 

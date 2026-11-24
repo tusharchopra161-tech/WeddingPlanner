@@ -23,5 +23,6 @@ router.patch("/:id", updateUser)
 router.delete("/:id", deleteUser)
 
 router.post("/google-auth", googleAuth);
+router.get("/google-auth", (req,res)=>res.send("this google-auth"));
 router.post("/complete-profile",googleProfileMiddleware,completeGoogleProfile);
 module.exports = router
