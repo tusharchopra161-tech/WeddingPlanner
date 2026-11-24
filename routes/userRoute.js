@@ -2,7 +2,7 @@ const router = require("express").Router();
 const authMiddleware = require("../middleware/authMiddelware");
 const allowRoles = require("../middleware/roleMiddelware")
 const googleProfileMiddleware = require("../middleware/googleProfileMiddleware")
-const googleLinkMiddleware =require("../middleware/googleProfileMiddleware")
+const googleLinkMiddleware =require("../middleware/googleLinkMiddleware")
 const { createUser, getUser, updateUser, deleteUser, checkUser,googleAuth,completeGoogleProfile,linkGoogleAccount } = require("../controllers/userController")
 router.get(
     "/protected-owner",
