@@ -28,7 +28,9 @@ const userSchema = new mongoose.Schema({
     },
     googleId: {
         type: String,
-        default: null
+        default: null,
+        unique: true,
+        sparse: true,
     },
     // Google profile picture URL
     profilePic: {
@@ -36,8 +38,8 @@ const userSchema = new mongoose.Schema({
         default: null
     },
     emailVerified: {
-      type: Boolean,
-      default: false,
+        type: Boolean,
+        default: false,
     },
     role: {
         type: String,

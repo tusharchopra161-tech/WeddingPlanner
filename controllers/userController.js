@@ -116,7 +116,7 @@ const checkUser = async (req, res) => {
     }
 }
 const googleAuth = async (req, res) => {
-    console.log("google auth")
+
     try {
         const { credential } = req.body;
 
@@ -133,13 +133,11 @@ const googleAuth = async (req, res) => {
                 message: "Authentication is not configured",
             });
         }
-        console.log("credentials=", credential)
         // Verify Google ID token
         const ticket = await googleClient.verifyIdToken({
             idToken: credential,
             audience: process.env.GOOGLE_CLIENT_ID,
         });
-        console.log("ticket", ticket)
         const payload = ticket.getPayload();
 
         if (
@@ -167,14 +165,53 @@ const googleAuth = async (req, res) => {
             });
         }
         // Prevent automatic linking to an existing manual account
+        // Existing manual account: require password verification
         if (!user) {
-            const existingUser = await User.findOne({ email });
+            const existingUser = await User.findOne({ email }).select("+password");
 
             if (existingUser) {
-                return res.status(409).json({
-                    success: false,
+                if (!existingUser.isActive) {
+                    return res.status(403).json({
+                        success: false,
+                        message: "Your account is inactive",
+                    });
+                }
+
+                // This account must have a password to link Google
+                if (!existingUser.password) {
+                    return res.status(400).json({
+                        success: false,
+                        message:
+                            "This account cannot be linked using a password. Please contact support.",
+                    });
+                }
+
+                // Temporary token for the account-linking process
+                const googleLinkToken = jwt.sign(
+                    {
+                        tokenType: "google-link",
+                        googleId,
+                        email,
+                        name: payload.name || "",
+                        profilePic: payload.picture || null,
+                    },
+                    process.env.JWT_SECRET,
+                    { expiresIn: "2m" }
+                );
+
+                return res.status(200).json({
+                    success: true,
+                    requiresAccountLink: true,
                     message:
-                        "This email is already registered. Please log in using your existing account.",
+                        "Please verify your existing password to link your Google account.",
+
+                    googleLinkToken,
+
+                    googleProfile: {
+                        name: payload.name || "",
+                        email,
+                        profilePic: payload.picture || null,
+                    },
                 });
             }
         }
@@ -187,7 +224,10 @@ const googleAuth = async (req, res) => {
                     message: "Your account is inactive",
                 });
             }
-
+            if (payload.picture) {
+                user.profilePic = payload.picture;
+                await user.save();
+            }
             const token = jwt.sign(
                 {
                     userId: user._id.toString(),
@@ -208,7 +248,7 @@ const googleAuth = async (req, res) => {
                     email: user.email,
                     mobileno: user.mobileno,
                     role: user.role,
-                    profilePic: payload.picture,
+                    profilePic: payload.picture || user.profilePic,
                     isProfileComplete: true,
                 },
             });
@@ -245,6 +285,127 @@ const googleAuth = async (req, res) => {
         return res.status(401).json({
             success: false,
             message: "Google authentication failed",
+        });
+    }
+};
+const linkGoogleAccount = async (req, res) => {
+    try {
+        const { password } = req.body;
+        const googleLink = req.googleLink;
+
+        if (!googleLink) {
+            return res.status(401).json({
+                success: false,
+                message: "Google verification is required",
+            });
+        }
+
+        if (!password?.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "Please enter your Wedding Planner password",
+            });
+        }
+
+        if (!process.env.JWT_SECRET) {
+            return res.status(500).json({
+                success: false,
+                message: "Authentication is not configured",
+            });
+        }
+
+        // Load the existing account's password for bcrypt verification.
+        const user = await User.findOne({
+            email: googleLink.email,
+        }).select("+password");
+
+        if (!user || !user.isActive) {
+            return res.status(401).json({
+                success: false,
+                message: "Unable to verify this account",
+            });
+        }
+
+        // Do not overwrite a Google account already linked to this user.
+        if (user.googleId && user.googleId !== googleLink.googleId) {
+            return res.status(409).json({
+                success: false,
+                message: "This account is already linked to another Google account",
+            });
+        }
+
+        // Prevent the same Google account from being linked to a different user.
+        const googleAccountInUse = await User.findOne({
+            googleId: googleLink.googleId,
+            _id: { $ne: user._id },
+        });
+
+        if (googleAccountInUse) {
+            return res.status(409).json({
+                success: false,
+                message: "This Google account is already linked to another account",
+            });
+        }
+
+        if (!user.password) {
+            return res.status(400).json({
+                success: false,
+                message: "This account does not have a password to verify",
+            });
+        }
+
+        const passwordMatches = await bcrypt.compare(
+            password,
+            user.password
+        );
+
+        if (!passwordMatches) {
+            return res.status(401).json({
+                success: false,
+                message: "Incorrect Wedding Planner password",
+            });
+        }
+
+        // Link Google without changing the existing account's role or profile.
+        user.googleId = googleLink.googleId;
+
+        if (googleLink.profilePic) {
+            user.profilePic = googleLink.profilePic;
+        }
+
+        await user.save();
+
+        const token = jwt.sign(
+            {
+                userId: user._id.toString(),
+                role: user.role,
+                tokenType: "access",
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Google account linked successfully",
+            token,
+            isProfileComplete: user.isProfileComplete,
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                mobileno: user.mobileno,
+                role: user.role,
+                profilePic: user.profilePic,
+                isProfileComplete: user.isProfileComplete,
+            },
+        });
+    } catch (error) {
+        console.error("Google account linking error:", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to link Google account",
         });
     }
 };
@@ -392,4 +553,4 @@ const completeGoogleProfile = async (req, res) => {
     }
 };
 
-module.exports = { createUser, getUser, updateUser, deleteUser, checkUser, googleAuth, completeGoogleProfile, }
+module.exports = { createUser, getUser, updateUser, deleteUser, checkUser, googleAuth, completeGoogleProfile,linkGoogleAccount}

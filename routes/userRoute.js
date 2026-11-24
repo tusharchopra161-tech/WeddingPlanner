@@ -2,7 +2,8 @@ const router = require("express").Router();
 const authMiddleware = require("../middleware/authMiddelware");
 const allowRoles = require("../middleware/roleMiddelware")
 const googleProfileMiddleware = require("../middleware/googleProfileMiddleware")
-const { createUser, getUser, updateUser, deleteUser, checkUser,googleAuth,completeGoogleProfile } = require("../controllers/userController")
+const googleLinkMiddleware =require("../middleware/googleProfileMiddleware")
+const { createUser, getUser, updateUser, deleteUser, checkUser,googleAuth,completeGoogleProfile,linkGoogleAccount } = require("../controllers/userController")
 router.get(
     "/protected-owner",
     authMiddleware,
@@ -23,6 +24,6 @@ router.patch("/:id", updateUser)
 router.delete("/:id", deleteUser)
 
 router.post("/google-auth", googleAuth);
-router.get("/google-auth", (req,res)=>res.send("this google-auth"));
 router.post("/complete-profile",googleProfileMiddleware,completeGoogleProfile);
+router.post("/google-link",googleLinkMiddleware,linkGoogleAccount);
 module.exports = router
