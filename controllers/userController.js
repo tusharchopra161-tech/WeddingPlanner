@@ -208,7 +208,7 @@ const googleAuth = async (req, res) => {
                     email: user.email,
                     mobileno: user.mobileno,
                     role: user.role,
-                    profilePic: user.profilePic,
+                    profilePic: payload.picture,
                     isProfileComplete: true,
                 },
             });
