@@ -132,13 +132,13 @@ const googleAuth = async (req, res) => {
                 message: "Authentication is not configured",
             });
         }
-
+        console.log(credential)
         // Verify Google ID token
         const ticket = await googleClient.verifyIdToken({
             idToken: credential,
             audience: process.env.GOOGLE_CLIENT_ID,
         });
-
+        console.log(ticket)
         const payload = ticket.getPayload();
 
         if (
