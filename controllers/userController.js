@@ -116,7 +116,7 @@ const checkUser = async (req, res) => {
     }
 }
 const googleAuth = async (req, res) => {
-    console.log("gogle auth")
+    console.log("google auth")
     try {
         const { credential } = req.body;
 
@@ -133,13 +133,13 @@ const googleAuth = async (req, res) => {
                 message: "Authentication is not configured",
             });
         }
-        console.log(credential)
+        console.log("credentials=", credential)
         // Verify Google ID token
         const ticket = await googleClient.verifyIdToken({
             idToken: credential,
             audience: process.env.GOOGLE_CLIENT_ID,
         });
-        console.log(ticket)
+        console.log("ticket", ticket)
         const payload = ticket.getPayload();
 
         if (
@@ -155,17 +155,17 @@ const googleAuth = async (req, res) => {
         }
 
         const googleId = payload.sub;
+
+        const email = payload.email.trim().toLowerCase();
+
+        // Find existing Google account
+        let user = await User.findOne({ googleId });
         if (user && !user.isActive) {
             return res.status(403).json({
                 success: false,
                 message: "Your account is inactive",
             });
         }
-        const email = payload.email.trim().toLowerCase();
-
-        // Find existing Google account
-        let user = await User.findOne({ googleId });
-
         // Prevent automatic linking to an existing manual account
         if (!user) {
             const existingUser = await User.findOne({ email });
