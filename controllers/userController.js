@@ -368,7 +368,7 @@ const linkGoogleAccount = async (req, res) => {
 
         // Link Google without changing the existing account's role or profile.
         user.googleId = googleLink.googleId;
-
+        user.isProfileComplete = true;
         if (googleLink.profilePic) {
             user.profilePic = googleLink.profilePic;
         }
