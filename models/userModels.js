@@ -23,30 +23,48 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         minlength: 6,
-        required: true
+        default: null,
+        select: false,
     },
-    role:{
-        type:String,
-        enum:["user","owner","admin"],
-        default:"user"
+    googleId: {
+        type: String,
+        default: null
     },
-    isActive:{
-        type:Boolean,
-        default:true
+    // Google profile picture URL
+    profilePic: {
+        type: String,
+        default: null
     },
-    subsciption:{
-        isSubscribe:{
-            type:Boolean,
-            default:false
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    role: {
+        type: String,
+        enum: ["user", "owner", "admin"],
+        default: "user"
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    isProfileComplete: {
+        type: Boolean,
+        default: false
+    },
+    subsciption: {
+        isSubscribe: {
+            type: Boolean,
+            default: false
         },
-        plan:{
-            type:String,
-            enum:["free","premium"],
-            default:"free"
+        plan: {
+            type: String,
+            enum: ["free", "premium"],
+            default: "free"
         },
-        expresAt:{
-            type:Date,
-            default:null
+        expresAt: {
+            type: Date,
+            default: null
         }
     }
 },

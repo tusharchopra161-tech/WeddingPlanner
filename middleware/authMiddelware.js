@@ -16,7 +16,16 @@ const authMiddleware = (req, res, next) => {
     const token = authHeader.split(" ")[1];
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
+    if (
+      decoded.tokenType !== "access" ||
+      !decoded.userId ||
+      !decoded.role
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: "Please complete your profile or log in again",
+      });
+    }
     req.user = {
       userId: decoded.userId,
       role: decoded.role,
